@@ -1,5 +1,6 @@
 package com.mudasir.flowcash.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -99,120 +100,103 @@ fun MainContainerScreen(
 
     var selectedIndex by remember { mutableIntStateOf(0) }
     var showAddModal by remember { mutableStateOf(false) }
+    var showAddAccountScreen by remember { mutableStateOf(false) }
 
     val authState by authViewModel.uiState.collectAsState()
     val currency by settingsViewModel.currency.collectAsState()
 
-    val userName = authState.user?.name ?: "Mudasir Unar"
+    val userName = authState.user?.name ?: "Mudasir"
     val userEmail = authState.user?.email ?: "mudasir@flowcash.io"
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-
-    Scaffold(
-        bottomBar = {
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
-            ) {
-                items.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
-                        label = { Text(item.title) },
-                        selected = selectedIndex == index,
-                        onClick = { selectedIndex = index },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                        )
-                    )
-                }
-            }
+    // Back handling when AddAccountScreen overlay is active
+    if (showAddAccountScreen) {
+        BackHandler {
+            showAddAccountScreen = false
         }
-    ) { innerPadding ->
-        Box(modifier = Modifier.padding(innerPadding)) {
-            AnimatedContent(
-                targetState = selectedIndex,
-                transitionSpec = {
-                    if (targetState > initialState) {
-                        (slideInHorizontally(
-                            initialOffsetX = { width -> width / 4 },
-                            animationSpec = tween(280, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(250))) togetherWith
-                                (slideOutHorizontally(
-                                    targetOffsetX = { width -> -width / 4 },
-                                    animationSpec = tween(280, easing = FastOutSlowInEasing)
-                                ) + fadeOut(animationSpec = tween(220)))
-                    } else {
-                        (slideInHorizontally(
-                            initialOffsetX = { width -> -width / 4 },
-                            animationSpec = tween(280, easing = FastOutSlowInEasing)
-                        ) + fadeIn(animationSpec = tween(250))) togetherWith
-                                (slideOutHorizontally(
-                                    targetOffsetX = { width -> width / 4 },
-                                    animationSpec = tween(280, easing = FastOutSlowInEasing)
-                                ) + fadeOut(animationSpec = tween(220)))
+
+        // Fullscreen overlay hides bottom bar & covers status bar properly
+        AddAccountScreen(
+            onSave = { account ->
+                dashboardViewModel.addAccount(account)
+                showAddAccountScreen = false
+            },
+            onBack = { showAddAccountScreen = false }
+        )
+    } else {
+        Scaffold(
+            bottomBar = {
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 8.dp
+                ) {
+                    items.forEachIndexed { index, item ->
+                        NavigationBarItem(
+                            icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
+                            label = { Text(item.title) },
+                            selected = selectedIndex == index,
+                            onClick = { selectedIndex = index },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                selectedTextColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                            )
+                        )
                     }
-                },
-                label = "BottomTabTransition"
-            ) { targetIndex ->
-                when (targetIndex) {
-                    0 -> DashboardScreen(
-                        dashboardViewModel = dashboardViewModel,
-                        userName = userName,
-                        currencySymbol = currency,
-                        onAddTransactionClick = { showAddModal = true }
-                    )
-                    1 -> TransactionsScreen(
-                        dashboardViewModel = dashboardViewModel,
-                        currencySymbol = currency,
-                        onAddTransactionClick = { showAddModal = true }
-                    )
-                    2 -> AnalyticsScreen(
-                        dashboardViewModel = dashboardViewModel,
-                        currencySymbol = currency
-                    )
-                    3 -> SettingsScreen(
-                        settingsViewModel = settingsViewModel,
-                        authViewModel = authViewModel,
-                        userName = userName,
-                        userEmail = userEmail,
-                        onLogoutClick = onLogoutClick
-                    )
                 }
             }
-        }
-
-        // Upgraded Add Transaction Sheet
-        if (showAddModal) {
-            val accounts by dashboardViewModel.accounts.collectAsState()
-            val accountNames = remember(accounts) { accounts.map { it.name }.ifEmpty { listOf("Main Wallet") } }
-
-            ModalBottomSheet(
-                onDismissRequest = { showAddModal = false },
-                sheetState = sheetState,
-                containerColor = MaterialTheme.colorScheme.surface
-            ) {
-                AddTransactionSheetContent(
-                    currencySymbol = currency,
-                    accountsList = accountNames,
-                    onAdd = { title, amount, type, category, account, note ->
-                        dashboardViewModel.addTransaction(
-                            title = title,
-                            amount = amount,
-                            type = type,
-                            category = category,
-                            accountName = account,
-                            note = note
-                        )
-                        scope.launch { sheetState.hide() }.invokeOnCompletion {
-                            if (!sheetState.isVisible) {
-                                showAddModal = false
-                            }
+        ) { innerPadding ->
+            Box(modifier = Modifier.padding(innerPadding)) {
+                AnimatedContent(
+                    targetState = selectedIndex,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (slideInHorizontally(
+                                initialOffsetX = { width -> width / 4 },
+                                animationSpec = tween(280, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(250))) togetherWith
+                                    (slideOutHorizontally(
+                                        targetOffsetX = { width -> -width / 4 },
+                                        animationSpec = tween(280, easing = FastOutSlowInEasing)
+                                    ) + fadeOut(animationSpec = tween(220)))
+                        } else {
+                            (slideInHorizontally(
+                                initialOffsetX = { width -> -width / 4 },
+                                animationSpec = tween(280, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(250))) togetherWith
+                                    (slideOutHorizontally(
+                                        targetOffsetX = { width -> width / 4 },
+                                        animationSpec = tween(280, easing = FastOutSlowInEasing)
+                                    ) + fadeOut(animationSpec = tween(220)))
                         }
+                    },
+                    label = "BottomTabTransition"
+                ) { targetIndex ->
+                    when (targetIndex) {
+                        0 -> DashboardScreen(
+                            dashboardViewModel = dashboardViewModel,
+                            userName = userName,
+                            currencySymbol = currency,
+                            onAddTransactionClick = { showAddModal = true },
+                            onAddAccountClick = { showAddAccountScreen = true }
+                        )
+                        1 -> TransactionsScreen(
+                            dashboardViewModel = dashboardViewModel,
+                            currencySymbol = currency,
+                            onAddTransactionClick = { showAddModal = true }
+                        )
+                        2 -> AnalyticsScreen(
+                            dashboardViewModel = dashboardViewModel,
+                            currencySymbol = currency
+                        )
+                        3 -> SettingsScreen(
+                            settingsViewModel = settingsViewModel,
+                            authViewModel = authViewModel,
+                            userName = userName,
+                            userEmail = userEmail,
+                            onLogoutClick = onLogoutClick
+                        )
                     }
-                )
+                }
             }
         }
     }

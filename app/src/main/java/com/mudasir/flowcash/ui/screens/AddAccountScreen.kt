@@ -1,0 +1,764 @@
+package com.mudasir.flowcash.ui.screens
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.Contactless
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.mudasir.flowcash.data.local.entity.AccountEntity
+import com.mudasir.flowcash.ui.theme.PrimaryIndigo
+
+// Premade card template data
+data class CardTemplate(
+    val name: String,
+    val startHex: String,
+    val endHex: String
+)
+
+val CARD_NETWORKS = listOf(
+    "VISA",
+    "MASTERCARD",
+    "AMEX",
+    "DISCOVER",
+    "JCB",
+    "UNIONPAY",
+    "RUPAY"
+)
+
+val CARD_TEMPLATES = listOf(
+    CardTemplate("Midnight Indigo", "#1E1B4B", "#4F46E5"),
+    CardTemplate("Emerald Banking", "#064E3B", "#059669"),
+    CardTemplate("Rose Gold", "#831843", "#E11D48"),
+    CardTemplate("Obsidian Black", "#0F172A", "#1E293B"),
+    CardTemplate("Royal Purple", "#4C1D95", "#7C3AED"),
+    CardTemplate("Sapphire Blue", "#1E3A5F", "#2563EB"),
+    CardTemplate("Sunset Orange", "#7C2D12", "#EA580C"),
+    CardTemplate("Silver Platinum", "#374151", "#6B7280")
+)
+
+val ACCOUNT_TYPES = listOf(
+    "CARD" to Icons.Default.CreditCard,
+    "CASH_WALLET" to Icons.Default.Wallet,
+    "INVESTMENT" to Icons.AutoMirrored.Filled.ShowChart,
+    "FREELANCE_INCOME" to Icons.Default.Work,
+    "SAVINGS" to Icons.Default.Savings,
+    "OTHER" to Icons.Default.MoreHoriz
+)
+
+fun parseHexColor(hex: String): Color {
+    return try {
+        Color(android.graphics.Color.parseColor(hex))
+    } catch (e: Exception) {
+        PrimaryIndigo
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddAccountScreen(
+    onSave: (AccountEntity) -> Unit,
+    onBack: () -> Unit
+) {
+    val focusManager = LocalFocusManager.current
+
+    var accountName by remember { mutableStateOf("") }
+    var holderName by remember { mutableStateOf("") }
+    var customTypeName by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf("CARD") }
+    var selectedNetwork by remember { mutableStateOf("VISA") }
+    var cardNumber by remember { mutableStateOf("") }
+    var rawExpiryDigits by remember { mutableStateOf("") }
+    var selectedTemplateIndex by remember { mutableStateOf(0) }
+
+    // Focus state for validation on touch loss
+    var cardNumberTouched by remember { mutableStateOf(false) }
+    var cardNumberHasFocus by remember { mutableStateOf(false) }
+
+    var expiryTouched by remember { mutableStateOf(false) }
+    var expiryHasFocus by remember { mutableStateOf(false) }
+
+    val isCardType = selectedType == "CARD"
+    val isOtherType = selectedType == "OTHER"
+    val currentTemplate = CARD_TEMPLATES[selectedTemplateIndex]
+
+    val resolvedAccountTypeLabel = if (isOtherType && customTypeName.isNotBlank()) {
+        customTypeName.trim()
+    } else if (isOtherType) {
+        "Other"
+    } else {
+        selectedType
+    }
+
+    // Format raw 4 digits into MM/YY strictly for display on the Live Card Preview
+    val previewFormattedExpiry = remember(rawExpiryDigits) {
+        if (rawExpiryDigits.length >= 3) {
+            "${rawExpiryDigits.take(2)}/${rawExpiryDigits.drop(2)}"
+        } else {
+            rawExpiryDigits
+        }
+    }
+
+    // Errors evaluate only when the field has lost focus
+    val isCardNumberError = isCardType && cardNumberTouched && !cardNumberHasFocus && cardNumber.length < 16
+    val isExpiryError = isCardType && expiryTouched && !expiryHasFocus && rawExpiryDigits.length < 4
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        text = "Add Account",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+                    )
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .imePadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+        ) {
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // === Live Card Preview ===
+            LiveCardPreview(
+                accountName = accountName.ifBlank { "Account Name" },
+                holderName = holderName.ifBlank { "CARDHOLDER" },
+                accountType = resolvedAccountTypeLabel,
+                network = selectedNetwork,
+                fullCardNumber = cardNumber,
+                expiryDate = previewFormattedExpiry.ifBlank { "MM/YY" },
+                startHex = currentTemplate.startHex,
+                endHex = currentTemplate.endHex
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // === Account Type Selector ===
+            Text(
+                text = "Account Type",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ACCOUNT_TYPES.forEach { (type, icon) ->
+                    val label = type.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
+                    FilterChip(
+                        selected = selectedType == type,
+                        onClick = { selectedType = type },
+                        label = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(label, fontSize = 11.sp)
+                            }
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    )
+                }
+            }
+
+            // Animated input field when "OTHER" is selected
+            AnimatedVisibility(visible = isOtherType) {
+                Column {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    OutlinedTextField(
+                        value = customTypeName,
+                        onValueChange = { customTypeName = it },
+                        label = { Text("Custom Type") },
+                        placeholder = { Text("e.g. Crypto, Gift Card") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // === Account Name ===
+            OutlinedTextField(
+                value = accountName,
+                onValueChange = { accountName = it },
+                label = { Text("Account / Wallet Name") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // === Holder Name ===
+            OutlinedTextField(
+                value = holderName,
+                onValueChange = { holderName = it },
+                label = { Text("Holder Name (display on card)") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(
+                    imeAction = if (isCardType) ImeAction.Next else ImeAction.Done
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            // === Card-specific fields ===
+            AnimatedVisibility(visible = isCardType) {
+                Column {
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Text(
+                        text = "Card Network",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CARD_NETWORKS.forEach { net ->
+                            val isSel = selectedNetwork == net
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(
+                                        if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                    )
+                                    .clickable { selectedNetwork = net }
+                                    .padding(horizontal = 14.dp, vertical = 8.dp)
+                            ) {
+                                Text(
+                                    text = net,
+                                    color = if (isSel) Color.White else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        // Card Number Field
+                        OutlinedTextField(
+                            value = cardNumber,
+                            onValueChange = { input ->
+                                cardNumber = input.filter { it.isDigit() }.take(16)
+                            },
+                            label = { Text("Card Number") },
+                            placeholder = { Text("1234567890123456") },
+                            singleLine = true,
+                            isError = isCardNumberError,
+                            supportingText = {
+                                if (isCardNumberError) {
+                                    Text(
+                                        text = "Incomplete card number",
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Next
+                            ),
+                            modifier = Modifier
+                                .weight(1.5f)
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused) cardNumberTouched = true
+                                    cardNumberHasFocus = focusState.isFocused
+                                }
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // Clean 4-Digit Raw Expiry Field
+                        OutlinedTextField(
+                            value = rawExpiryDigits,
+                            onValueChange = { input ->
+                                rawExpiryDigits = input.filter { it.isDigit() }.take(4)
+                            },
+                            label = { Text("Expiry") },
+                            placeholder = { Text("MMYY") },
+                            singleLine = true,
+                            isError = isExpiryError,
+                            supportingText = {
+                                if (isExpiryError) {
+                                    Text(
+                                        text = "Invalid date",
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = { focusManager.clearFocus() }
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .onFocusChanged { focusState ->
+                                    if (focusState.isFocused) expiryTouched = true
+                                    expiryHasFocus = focusState.isFocused
+                                }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // === Card Template Selection ===
+            Text(
+                text = "Card Style",
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Select a card template to set the look of your account card.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CARD_TEMPLATES.forEachIndexed { index, template ->
+                    val isSelected = selectedTemplateIndex == index
+                    Box(
+                        modifier = Modifier
+                            .size(width = 120.dp, height = 80.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        parseHexColor(template.startHex),
+                                        parseHexColor(template.endHex)
+                                    )
+                                )
+                            )
+                            .border(
+                                width = if (isSelected) 3.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(14.dp)
+                            )
+                            .clickable { selectedTemplateIndex = index }
+                            .padding(10.dp),
+                        contentAlignment = Alignment.BottomStart
+                    ) {
+                        Column {
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp, 12.dp)
+                                    .clip(RoundedCornerShape(2.dp))
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0xFFFCD34D), Color(0xFFF59E0B))
+                                        )
+                                    )
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = template.name,
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                lineHeight = 11.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // === Save Action Button ===
+            val isFormValid = accountName.isNotBlank() &&
+                    (!isOtherType || customTypeName.isNotBlank()) &&
+                    (!isCardType || (cardNumber.length == 16 && rawExpiryDigits.length == 4))
+
+            Button(
+                onClick = {
+                    if (isFormValid) {
+                        val account = AccountEntity(
+                            id = "acc_${System.currentTimeMillis()}",
+                            name = accountName,
+                            holderName = holderName,
+                            accountType = resolvedAccountTypeLabel,
+                            network = if (isCardType) selectedNetwork else "NONE",
+                            cardNumber = if (isCardType) cardNumber else "",
+                            expiryDate = if (isCardType) previewFormattedExpiry else "",
+                            cardColorStart = currentTemplate.startHex,
+                            cardColorEnd = currentTemplate.endHex
+                        )
+                        onSave(account)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                enabled = isFormValid
+            ) {
+                Text("Create Account", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+        }
+    }
+}
+
+@Composable
+fun LiveCardPreview(
+    accountName: String,
+    holderName: String,
+    accountType: String,
+    network: String,
+    fullCardNumber: String,
+    expiryDate: String,
+    startHex: String,
+    endHex: String
+) {
+    val isCardType = accountType == "CARD"
+
+    val formattedCardNumber = remember(fullCardNumber) {
+        val padded = fullCardNumber.padEnd(16, '•')
+        padded.chunked(4).joinToString("   ")
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(parseHexColor(startHex), parseHexColor(endHex))
+                )
+            )
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(22.dp))
+            .padding(20.dp)
+    ) {
+        Column {
+            // Top row: Name + Network Logo
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = accountName,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+
+                if (isCardType) {
+                    CardNetworkLogo(network = network)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Chip + Contactless
+            if (isCardType) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Realistic chip with inner lines
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp, 26.dp)
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(
+                                Brush.linearGradient(listOf(Color(0xFFFCD34D), Color(0xFFF59E0B)))
+                            )
+                            .border(0.5.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(5.dp))
+                    ) {
+                        // Inner chip lines
+                        Column(
+                            modifier = Modifier.fillMaxSize().padding(3.dp),
+                            verticalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            repeat(3) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(Color(0xFFD97706).copy(alpha = 0.4f))
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Icon(
+                        imageVector = Icons.Default.Contactless,
+                        contentDescription = "Contactless",
+                        tint = Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(if (isCardType) 16.dp else 8.dp))
+
+            // Card number or account type label
+            if (isCardType) {
+                Text(
+                    text = formattedCardNumber,
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        color = Color.White.copy(alpha = 0.85f),
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 2.sp
+                    )
+                )
+            } else {
+                val typeLabel = accountType.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
+                Text(
+                    text = typeLabel,
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Bottom: Holder name + Expiry
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Column {
+                    Text(
+                        text = "CARD HOLDER",
+                        color = Color.White.copy(alpha = 0.35f),
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 1.sp
+                    )
+                    Text(
+                        text = holderName.uppercase(),
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        letterSpacing = 1.sp
+                    )
+                }
+                if (isCardType && expiryDate.isNotBlank()) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "VALID THRU",
+                            color = Color.White.copy(alpha = 0.35f),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            text = expiryDate,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CardNetworkLogo(network: String) {
+    when (network.uppercase()) {
+        "MASTERCARD" -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFEB001B))
+                )
+                Spacer(modifier = Modifier.width(-8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFBBF24).copy(alpha = 0.9f))
+                )
+            }
+        }
+        "VISA" -> {
+            Text(
+                text = "VISA",
+                color = Color.White,
+                fontWeight = FontWeight.Black,
+                fontSize = 17.sp,
+                letterSpacing = 2.sp
+            )
+        }
+        "AMEX" -> {
+            Text(
+                text = "AMEX",
+                color = Color(0xFF0070CD),
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            )
+        }
+        "DISCOVER" -> {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "DISCOVER",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    letterSpacing = 1.sp
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFF6000))
+                )
+            }
+        }
+        "JCB" -> {
+            Text(
+                text = "JCB",
+                color = Color.White,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 13.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFF003781))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            )
+        }
+        "UNIONPAY" -> {
+            Text(
+                text = "UnionPay",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color(0xFF007B88))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            )
+        }
+        "RUPAY" -> {
+            Text(
+                text = "RuPay",
+                color = Color(0xFF132A63),
+                fontWeight = FontWeight.Black,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            )
+        }
+        else -> {
+            Text(
+                text = network,
+                color = Color.White.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+        }
+    }
+}

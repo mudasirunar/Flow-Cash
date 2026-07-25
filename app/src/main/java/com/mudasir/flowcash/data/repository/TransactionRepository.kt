@@ -66,22 +66,8 @@ class TransactionRepository(
         budgetDao.deleteBudget(categoryName)
     }
 
-    suspend fun addAccount(
-        name: String,
-        network: String,
-        lastFourDigits: String,
-        expiryDate: String,
-        colorHex: String
-    ) {
-        val entity = AccountEntity(
-            id = "acc_${System.currentTimeMillis()}",
-            name = name,
-            network = network,
-            lastFourDigits = lastFourDigits,
-            expiryDate = expiryDate,
-            cardColorHex = colorHex
-        )
-        accountDao.insertAccount(entity)
+    suspend fun addAccount(account: AccountEntity) {
+        accountDao.insertAccount(account)
     }
 
     suspend fun deleteAccount(id: String) {

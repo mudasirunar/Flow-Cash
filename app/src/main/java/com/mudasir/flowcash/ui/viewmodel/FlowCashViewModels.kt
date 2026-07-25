@@ -5,6 +5,8 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.mudasir.flowcash.data.local.FlowCashDatabase
+import com.mudasir.flowcash.data.local.entity.AccountEntity
+import com.mudasir.flowcash.data.local.entity.BudgetEntity
 import com.mudasir.flowcash.data.model.CategoryType
 import com.mudasir.flowcash.data.model.TransactionItem
 import com.mudasir.flowcash.data.model.TransactionType
@@ -83,7 +85,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedFilter = MutableStateFlow<TransactionType?>(null)
-    private val _selectedAccount = MutableStateFlow<com.mudasir.flowcash.data.local.entity.AccountEntity?>(null)
+    private val _selectedAccount = MutableStateFlow<AccountEntity?>(null)
 
     val transactions: StateFlow<List<TransactionItem>> = repository.allTransactions.stateIn(
         scope = viewModelScope,
@@ -107,15 +109,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     val selectedFilter: StateFlow<TransactionType?> = _selectedFilter.asStateFlow()
-    val selectedAccount: StateFlow<com.mudasir.flowcash.data.local.entity.AccountEntity?> = _selectedAccount.asStateFlow()
+    val selectedAccount: StateFlow<AccountEntity?> = _selectedAccount.asStateFlow()
 
-    val accounts: StateFlow<List<com.mudasir.flowcash.data.local.entity.AccountEntity>> = repository.allAccounts.stateIn(
+    val accounts: StateFlow<List<AccountEntity>> = repository.allAccounts.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
 
-    val budgets: StateFlow<List<com.mudasir.flowcash.data.local.entity.BudgetEntity>> = repository.allBudgets.stateIn(
+    val budgets: StateFlow<List<BudgetEntity>> = repository.allBudgets.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -127,13 +129,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    fun addAccount(name: String, network: String, lastFourDigits: String, expiryDate: String, colorHex: String) {
+    fun addAccount(account: AccountEntity) {
         viewModelScope.launch {
-            repository.addAccount(name, network, lastFourDigits, expiryDate, colorHex)
+            repository.addAccount(account)
         }
     }
 
-    fun setSelectedAccount(account: com.mudasir.flowcash.data.local.entity.AccountEntity?) {
+    fun deleteAccount(id: String) {
+        viewModelScope.launch {
+            repository.deleteAccount(id)
+        }
+    }
+
+    fun setSelectedAccount(account: AccountEntity?) {
         _selectedAccount.value = account
     }
 
@@ -143,10 +151,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun setFilter(filter: TransactionType?) {
         _selectedFilter.value = filter
-    }
-
-    fun setSelectedAccount(account: String) {
-        // Obsolete method replaced by Object overload
     }
 
     fun addTransaction(

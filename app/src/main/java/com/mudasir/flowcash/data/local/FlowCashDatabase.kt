@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [TransactionEntity::class, BudgetEntity::class, AccountEntity::class],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class FlowCashDatabase : RoomDatabase() {
@@ -38,7 +38,7 @@ abstract class FlowCashDatabase : RoomDatabase() {
                     "flowcash_database"
                 )
                     .fallbackToDestructiveMigration()
-                    .addCallback(object : RoomDatabase.Callback() {
+                    .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)
                             INSTANCE?.let { database ->
@@ -47,38 +47,6 @@ abstract class FlowCashDatabase : RoomDatabase() {
                                     database.budgetDao().insertBudget(BudgetEntity("Food", 300.0))
                                     database.budgetDao().insertBudget(BudgetEntity("Shopping", 200.0))
                                     database.budgetDao().insertBudget(BudgetEntity("Bills", 500.0))
-
-                                    // Seed default card accounts
-                                    database.accountDao().insertAccount(
-                                        AccountEntity(
-                                            id = "acc_main",
-                                            name = "Main Wallet",
-                                            network = "CASH",
-                                            lastFourDigits = "",
-                                            expiryDate = "",
-                                            cardColorHex = "#4F46E5"
-                                        )
-                                    )
-                                    database.accountDao().insertAccount(
-                                        AccountEntity(
-                                            id = "acc_savings",
-                                            name = "Savings Account",
-                                            network = "VISA",
-                                            lastFourDigits = "1024",
-                                            expiryDate = "12/30",
-                                            cardColorHex = "#059669"
-                                        )
-                                    )
-                                    database.accountDao().insertAccount(
-                                        AccountEntity(
-                                            id = "acc_investment",
-                                            name = "Investment Portfolio",
-                                            network = "MASTERCARD",
-                                            lastFourDigits = "8839",
-                                            expiryDate = "08/29",
-                                            cardColorHex = "#0F172A"
-                                        )
-                                    )
                                 }
                             }
                         }
