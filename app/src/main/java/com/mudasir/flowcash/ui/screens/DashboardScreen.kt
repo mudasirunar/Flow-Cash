@@ -1,11 +1,8 @@
 package com.mudasir.flowcash.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,10 +23,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.AttachMoney
@@ -37,17 +34,20 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Contactless
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -69,6 +69,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -89,7 +90,8 @@ fun DashboardScreen(
     userName: String = "Mudasir",
     currencySymbol: String = "$",
     onAddTransactionClick: () -> Unit,
-    onAddAccountClick: () -> Unit = {}
+    onAddAccountClick: () -> Unit = {},
+    onEditAccountClick: (AccountEntity) -> Unit = {}
 ) {
     val allTransactions by dashboardViewModel.transactions.collectAsState()
     val transactions by dashboardViewModel.filteredTransactions.collectAsState()
@@ -99,6 +101,7 @@ fun DashboardScreen(
 
     var isDataVisible by remember { mutableStateOf(true) }
     var showBottomSheetSelector by remember { mutableStateOf(false) }
+    var accountToDelete by remember { mutableStateOf<AccountEntity?>(null) }
 
     val activeAccountTransactions = remember(allTransactions, selectedAccount) {
         allTransactions.filter {
@@ -132,23 +135,13 @@ fun DashboardScreen(
                 Text(userName, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Eye toggle for ALL data
-                IconButton(onClick = { isDataVisible = !isDataVisible }) {
-                    Icon(
-                        imageVector = if (isDataVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                        contentDescription = "Toggle Data Visibility",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(
-                    onClick = { },
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            IconButton(
+                onClick = { },
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -156,7 +149,6 @@ fun DashboardScreen(
 
         // === Adaptive Dashboard Card ===
         if (selectedAccount != null) {
-            // Card is selected — render it
             SelectedAccountCard(
                 account = selectedAccount!!,
                 netBalance = netBalance,
@@ -164,16 +156,17 @@ fun DashboardScreen(
                 totalExpense = totalExpense,
                 currencySymbol = currencySymbol,
                 isDataVisible = isDataVisible,
+                onToggleVisibility = { isDataVisible = !isDataVisible },
                 onClick = { showBottomSheetSelector = true }
             )
         } else {
-            // No card selected — show clean overview
             OverviewCard(
                 netBalance = netBalance,
                 totalIncome = totalIncome,
                 totalExpense = totalExpense,
                 currencySymbol = currencySymbol,
                 isDataVisible = isDataVisible,
+                onToggleVisibility = { isDataVisible = !isDataVisible },
                 onClick = { showBottomSheetSelector = true }
             )
         }
@@ -255,10 +248,11 @@ fun DashboardScreen(
                 Text("Choose a wallet to filter dashboard metrics.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // "All Accounts" option
                 AccountSelectorRow(
                     label = "All Accounts",
+                    icon = Icons.Default.Wallet,
                     isSelected = selectedAccount == null,
+                    isAllAccounts = true,
                     onClick = {
                         dashboardViewModel.setSelectedAccount(null)
                         showBottomSheetSelector = false
@@ -267,12 +261,27 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 accounts.forEach { account ->
+                    val accountIcon = if (account.accountType == "CARD") {
+                        Icons.Default.CreditCard
+                    } else {
+                        getAccountTypeIcon(account.accountType)
+                    }
+
                     AccountSelectorRow(
                         label = account.name,
+                        icon = accountIcon,
                         isSelected = account.id == selectedAccount?.id,
                         onClick = {
                             dashboardViewModel.setSelectedAccount(account)
                             showBottomSheetSelector = false
+                        },
+                        onEdit = {
+                            showBottomSheetSelector = false
+                            onEditAccountClick(account) // Opens AddAccountScreen pre-filled
+                        },
+                        onDelete = {
+                            showBottomSheetSelector = false
+                            accountToDelete = account // Triggers Confirmation Dialog
                         }
                     )
                     Spacer(modifier = Modifier.height(4.dp))
@@ -280,7 +289,6 @@ fun DashboardScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Add new card/wallet button
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -301,26 +309,129 @@ fun DashboardScreen(
             }
         }
     }
+
+// === Delete Confirmation Dialog ===
+    if (accountToDelete != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { accountToDelete = null },
+            title = {
+                Text(
+                    text = "Delete Account?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete \"${accountToDelete?.name}\"? All related income and expense transactions will be permanently deleted from history.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        accountToDelete?.let { acc ->
+                            dashboardViewModel.deleteAccountAndTransactions(acc)
+                        }
+                        accountToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ExpenseRed,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Delete", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { accountToDelete = null },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
+// --- Updated AccountSelectorRow ---
 @Composable
-private fun AccountSelectorRow(label: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun AccountSelectorRow(
+    label: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    isAllAccounts: Boolean = false,
+    onClick: () -> Unit,
+    onEdit: () -> Unit = {},
+    onDelete: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.CreditCard, contentDescription = label, tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(label, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal, color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+            )
         }
-        if (isSelected) Icon(Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (isSelected) {
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = "Selected",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+            }
+
+            // Show Edit & Delete actions for custom accounts
+            if (!isAllAccounts) {
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit Account",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete Account",
+                        tint = ExpenseRed.copy(alpha = 0.8f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -332,10 +443,10 @@ private fun OverviewCard(
     totalExpense: Double,
     currencySymbol: String,
     isDataVisible: Boolean,
+    onToggleVisibility: () -> Unit,
     onClick: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
-        // Aura glow
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -367,21 +478,27 @@ private fun OverviewCard(
                         Text("All Accounts", style = MaterialTheme.typography.labelMedium.copy(color = Color.White, fontWeight = FontWeight.SemiBold))
                         Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
-                    Text("FlowCash", color = Color.White.copy(alpha = 0.4f), fontWeight = FontWeight.Bold, fontSize = 14.sp, letterSpacing = 2.sp)
+
+                    // Card Eye Button Toggle
+                    CardEyeButton(isDataVisible = isDataVisible, onToggle = onToggleVisibility)
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // Animated balance
-                AnimatedVisibility(visible = isDataVisible, enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { -it / 3 }, exit = fadeOut(tween(300)) + slideOutVertically(tween(300)) { -it / 3 }) {
-                    Text(
-                        text = "$currencySymbol${String.format("%,.2f", netBalance)}",
-                        style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold, color = Color.White, fontSize = 32.sp)
+                // REPLACE the balance Crossfade block with this single fixed Text view:
+                val displayBalance = remember(isDataVisible, netBalance, currencySymbol) {
+                    if (isDataVisible) "$currencySymbol ${String.format("%,.2f", netBalance)}"
+                    else "$currencySymbol ••••••"
+                }
+
+                Text(
+                    text = displayBalance,
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isDataVisible) Color.White else Color.White.copy(alpha = 0.6f),
+                        fontSize = 28.sp
                     )
-                }
-                if (!isDataVisible) {
-                    Text("$currencySymbol ••••••", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = 0.5f), fontSize = 32.sp))
-                }
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -391,7 +508,7 @@ private fun OverviewCard(
     }
 }
 
-// === Selected Account Card (realistic credit card or account card) ===
+// === Selected Account Card ===
 @Composable
 private fun SelectedAccountCard(
     account: AccountEntity,
@@ -400,15 +517,20 @@ private fun SelectedAccountCard(
     totalExpense: Double,
     currencySymbol: String,
     isDataVisible: Boolean,
+    onToggleVisibility: () -> Unit,
     onClick: () -> Unit
 ) {
     val startColor = parseHexColor(account.cardColorStart)
     val endColor = parseHexColor(account.cardColorEnd)
     val isCard = account.accountType == "CARD"
-    val network = account.network
+
+    val formattedAccountType = account.accountType
+        .replace("_", " ")
+        .lowercase()
+        .split(" ")
+        .joinToString(" ") { word -> word.replaceFirstChar { it.uppercase() } }
 
     Box(modifier = Modifier.fillMaxWidth()) {
-        // Aura glow
         Box(
             modifier = Modifier.align(Alignment.Center).size(240.dp, 100.dp).blur(50.dp)
                 .background(Brush.radialGradient(colors = listOf(endColor.copy(alpha = 0.3f), Color.Transparent)))
@@ -424,45 +546,43 @@ private fun SelectedAccountCard(
                 .padding(22.dp)
         ) {
             Column {
-                // Top: Name pill + Network
+                // Top Row: Account Name Pill + Card Eye Toggle & Network Logo
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = 0.08f)).padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
-                        Icon(Icons.Default.CreditCard, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                        val icon = if (isCard) Icons.Default.CreditCard else getAccountTypeIcon(account.accountType)
+                        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(account.name, style = MaterialTheme.typography.labelMedium.copy(color = Color.White, fontWeight = FontWeight.SemiBold))
                         Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
 
-                    // Network logo
-                    if (isCard) {
-                        when (network) {
-                            "MASTERCARD" -> Row {
-                                Box(Modifier.size(22.dp).clip(CircleShape).background(Color(0xFFEB001B)))
-                                Spacer(Modifier.width(-8.dp))
-                                Box(Modifier.size(22.dp).clip(CircleShape).background(Color(0xFFFBBF24).copy(alpha = 0.85f)))
-                            }
-                            "VISA" -> Text("VISA", color = Color.White, fontWeight = FontWeight.Black, fontSize = 18.sp, letterSpacing = 2.sp)
-                            "AMEX" -> Text("AMEX", color = Color(0xFF0070CD), fontWeight = FontWeight.Bold, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(4.dp)).background(Color.White).padding(horizontal = 6.dp, vertical = 2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CardEyeButton(isDataVisible = isDataVisible, onToggle = onToggleVisibility)
+                        Spacer(modifier = Modifier.width(8.dp))
+
+                        if (isCard) {
+                            CardNetworkLogo(network = account.network)
+                        } else {
+                            Text(
+                                text = formattedAccountType,
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color.White.copy(alpha = 0.15f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
                         }
-                    } else {
-                        val typeIcon = when (account.accountType) {
-                            "CASH_WALLET" -> Icons.Default.Wallet
-                            "BANK_ACCOUNT" -> Icons.Default.AccountBalance
-                            "INVESTMENT" -> Icons.AutoMirrored.Filled.ShowChart
-                            "FREELANCE_INCOME" -> Icons.Default.Work
-                            "SAVINGS" -> Icons.Default.Savings
-                            else -> Icons.Default.AttachMoney
-                        }
-                        Icon(typeIcon, contentDescription = null, tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(22.dp))
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Chip + Contactless (only for cards)
+                // Chip + Contactless (only for card types)
                 if (isCard) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
@@ -484,86 +604,90 @@ private fun SelectedAccountCard(
                     Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                // Balance
-                AnimatedVisibility(visible = isDataVisible, enter = fadeIn(tween(400)) + slideInVertically(tween(400)) { -it / 3 }, exit = fadeOut(tween(300)) + slideOutVertically(tween(300)) { -it / 3 }) {
-                    Text("$currencySymbol${String.format("%,.2f", netBalance)}", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold, color = Color.White, fontSize = 28.sp))
+                // In SelectedAccountCard: Replace the balance Crossfade block with this:
+                val displayAccountBalance = remember(isDataVisible, netBalance, currencySymbol) {
+                    if (isDataVisible) "$currencySymbol ${String.format("%,.2f", netBalance)}"
+                    else "$currencySymbol ••••••"
                 }
-                if (!isDataVisible) {
-                    Text("$currencySymbol ••••••", style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.ExtraBold, color = Color.White.copy(alpha = 0.5f), fontSize = 28.sp))
-                }
+
+                Text(
+                    text = displayAccountBalance,
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (isDataVisible) Color.White else Color.White.copy(alpha = 0.6f),
+                        fontSize = 28.sp
+                    )
+                )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Card number (only for card type) + holder name
+                // Card Number or Type Banner
                 if (isCard) {
-                    AnimatedVisibility(
-                        visible = isDataVisible,
-                        enter = fadeIn(tween(400)),
-                        exit = fadeOut(tween(300))
-                    ) {
+                    Crossfade(targetState = isDataVisible, animationSpec = tween(250), label = "CardNumberVisibility") { visible ->
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            val rawNumber = account.cardNumber.ifBlank { "0000000000000000" }
+                            if (visible) {
+                                val rawNumber = account.cardNumber.ifBlank { "0000000000000000" }
+                                val fullFormatted = rawNumber.padEnd(16, '0').chunked(4).joinToString("   ")
 
-                            val fullFormatted = rawNumber
-                                .padEnd(16, '0')
-                                .chunked(4)
-                                .joinToString("   ")
+                                Text(
+                                    text = fullFormatted,
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 1.5.sp,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = account.expiryDate.ifBlank { "MM/YY" },
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp
+                                )
+                            } else {
+                                val lastFour = account.cardNumber.takeLast(4).ifBlank { "0000" }
+                                val maskedFormatted = "••••   ••••   ••••   $lastFour"
 
-                            Text(
-                                text = fullFormatted,
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 1.5.sp,
-                                fontSize = 13.sp
-                            )
-                            Text(
-                                text = account.expiryDate.ifBlank { "MM/YY" },
-                                color = Color.White.copy(alpha = 0.7f),
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-
-                    // Masked view when Eye icon is turned off
-                    if (!isDataVisible) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val lastFour = account.cardNumber.takeLast(4).ifBlank { "0000" }
-                            val maskedFormatted = "••••   ••••   ••••   $lastFour"
-
-                            Text(
-                                text = maskedFormatted,
-                                color = Color.White.copy(alpha = 0.5f),
-                                fontWeight = FontWeight.SemiBold,
-                                letterSpacing = 2.sp,
-                                fontSize = 13.sp
-                            )
-                            Text(
-                                text = "••/••",
-                                color = Color.White.copy(alpha = 0.35f),
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.sp
-                            )
+                                Text(
+                                    text = maskedFormatted,
+                                    color = Color.White.copy(alpha = 0.5f),
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 2.sp,
+                                    fontSize = 13.sp
+                                )
+                                Text(
+                                    text = "••/••",
+                                    color = Color.White.copy(alpha = 0.35f),
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 12.sp
+                                )
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(4.dp))
+                } else {
+                    Text(
+                        text = formattedAccountType.uppercase(),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            color = Color.White.copy(alpha = 0.6f),
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp,
+                            fontSize = 11.sp
+                        )
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                 }
 
-                // Holder name
+                // Holder Name
                 if (account.holderName.isNotBlank()) {
-                    AnimatedVisibility(visible = isDataVisible, enter = fadeIn(tween(400)), exit = fadeOut(tween(300))) {
-                        Text(account.holderName.uppercase(), color = Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp)
-                    }
-                    if (!isDataVisible) {
-                        Text("•••••••", color = Color.White.copy(alpha = 0.25f), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Crossfade(targetState = isDataVisible, animationSpec = tween(250), label = "HolderNameVisibility") { visible ->
+                        if (visible) {
+                            Text(account.holderName.uppercase(), color = Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp)
+                        } else {
+                            Text("•••••••", color = Color.White.copy(alpha = 0.25f), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                        }
                     }
                 }
 
@@ -572,6 +696,40 @@ private fun SelectedAccountCard(
                 IncomeExpenseMetricsRow(totalIncome, totalExpense, currencySymbol, isDataVisible)
             }
         }
+    }
+}
+
+// Glassmorphism Card Eye Button Toggle
+@Composable
+private fun CardEyeButton(
+    isDataVisible: Boolean,
+    onToggle: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.15f))
+            .clickable(onClick = onToggle),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = if (isDataVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+            contentDescription = "Toggle Visibility",
+            tint = Color.White,
+            modifier = Modifier.size(16.dp)
+        )
+    }
+}
+
+fun getAccountTypeIcon(type: String): ImageVector {
+    return when (type) {
+        "CASH_WALLET" -> Icons.Default.Wallet
+        "BANK_ACCOUNT" -> Icons.Default.AccountBalance
+        "INVESTMENT" -> Icons.AutoMirrored.Filled.ShowChart
+        "FREELANCE_INCOME" -> Icons.Default.Work
+        "SAVINGS" -> Icons.Default.Savings
+        else -> Icons.Default.MoreHoriz
     }
 }
 
@@ -585,10 +743,18 @@ private fun IncomeExpenseMetricsRow(totalIncome: Double, totalExpense: Double, c
             Spacer(modifier = Modifier.width(6.dp))
             Column {
                 Text("Income", style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp))
-                AnimatedVisibility(visible = isVisible, enter = fadeIn(tween(400)), exit = fadeOut(tween(300))) {
-                    Text("$currencySymbol${String.format("%,.2f", totalIncome)}", style = MaterialTheme.typography.titleSmall.copy(color = Color.White, fontWeight = FontWeight.Bold))
+                val displayIncome = remember(isVisible, totalIncome, currencySymbol) {
+                    if (isVisible) "$currencySymbol ${String.format("%,.2f", totalIncome)}"
+                    else "$currencySymbol •••"
                 }
-                if (!isVisible) Text("$currencySymbol •••", color = Color.White.copy(alpha = 0.4f), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+
+                Text(
+                    text = displayIncome,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        color = if (isVisible) Color.White else Color.White.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Bold
+                    )
+                )
             }
         }
 
@@ -599,10 +765,19 @@ private fun IncomeExpenseMetricsRow(totalIncome: Double, totalExpense: Double, c
             Spacer(modifier = Modifier.width(6.dp))
             Column {
                 Text("Expense", style = MaterialTheme.typography.bodySmall.copy(color = Color.White.copy(alpha = 0.5f), fontSize = 10.sp))
-                AnimatedVisibility(visible = isVisible, enter = fadeIn(tween(400)), exit = fadeOut(tween(300))) {
-                    Text("$currencySymbol${String.format("%,.2f", totalExpense)}", style = MaterialTheme.typography.titleSmall.copy(color = Color.White, fontWeight = FontWeight.Bold))
+                // In IncomeExpenseMetricsRow: Replace the Expense Crossfade block with this:
+                val displayExpense = remember(isVisible, totalExpense, currencySymbol) {
+                    if (isVisible) "$currencySymbol ${String.format("%,.2f", totalExpense)}"
+                    else "$currencySymbol •••"
                 }
-                if (!isVisible) Text("$currencySymbol •••", color = Color.White.copy(alpha = 0.4f), fontWeight = FontWeight.Bold, fontSize = 14.sp)
+
+                Text(
+                    text = displayExpense,
+                    style = MaterialTheme.typography.titleSmall.copy(
+                        color = if (isVisible) Color.White else Color.White.copy(alpha = 0.5f),
+                        fontWeight = FontWeight.Bold
+                    )
+                )
             }
         }
     }
@@ -631,7 +806,7 @@ fun TransactionRowItem(transaction: TransactionItem, currencySymbol: String) {
                 }
             }
             Text(
-                text = "${if (isIncome) "+" else "-"}$currencySymbol${String.format("%,.2f", transaction.amount)}",
+                text = "${if (isIncome) "+" else "-"}$currencySymbol ${String.format("%,.2f", transaction.amount)}",
                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = if (isIncome) IncomeGreen else ExpenseRed)
             )
         }

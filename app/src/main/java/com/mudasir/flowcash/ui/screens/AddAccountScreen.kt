@@ -23,11 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Contactless
 import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Wallet
@@ -46,6 +48,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -63,6 +66,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.data.local.entity.AccountEntity
+import com.mudasir.flowcash.ui.theme.ExpenseRed
 import com.mudasir.flowcash.ui.theme.PrimaryIndigo
 
 // Premade card template data
@@ -113,19 +117,170 @@ fun parseHexColor(hex: String): Color {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddAccountScreen(
+    accountToEdit: AccountEntity? = null,
     onSave: (AccountEntity) -> Unit,
+    onDelete: ((AccountEntity) -> Unit)? = null,
     onBack: () -> Unit
 ) {
     val focusManager = LocalFocusManager.current
+    val isEditMode = accountToEdit != null
 
-    var accountName by remember { mutableStateOf("") }
-    var holderName by remember { mutableStateOf("") }
-    var customTypeName by remember { mutableStateOf("") }
-    var selectedType by remember { mutableStateOf("CARD") }
-    var selectedNetwork by remember { mutableStateOf("VISA") }
-    var cardNumber by remember { mutableStateOf("") }
-    var rawExpiryDigits by remember { mutableStateOf("") }
-    var selectedTemplateIndex by remember { mutableStateOf(0) }
+    // Determine default pre-selected template or fallback
+    val initialTemplateIndex = remember(accountToEdit) {
+        CARD_TEMPLATES.indexOfFirst { it.startHex == accountToEdit?.cardColorStart }.coerceAtLeast(0)
+    }
+
+    var accountName by remember(accountToEdit) { mutableStateOf(accountToEdit?.name ?: "") }
+    var holderName by remember(accountToEdit) { mutableStateOf(accountToEdit?.holderName ?: "") }
+    
+    val initialType = remember(accountToEdit) {
+        val type = accountToEdit?.accountType ?: "CARD"
+        if (ACCOUNT_TYPES.any { it.first == type }) type else "OTHER"
+    }
+    
+    var customTypeName by remember(accountToEdit) {
+        val type = accountToEdit?.accountType ?: "CARD"
+        val initialSelectedType = if (ACCOUNT_TYPES.any { it.first == type }) type else "OTHER"
+        mutableStateOf(if (initialSelectedType == "OTHER") type else "")
+    }
+    
+    var selectedType by remember(accountToEdit) { mutableStateOf(initialType) }
+    var selectedNetwork by remember(accountToEdit) { mutableStateOf(accountToEdit?.network?.ifEmpty { "VISA" } ?: "VISA") }
+    var cardNumber by remember(accountToEdit) { mutableStateOf(accountToEdit?.cardNumber ?: "") }
+    var rawExpiryDigits by remember(accountToEdit) { mutableStateOf(accountToEdit?.expiryDate?.filter { it.isDigit() } ?: "") }
+    var selectedTemplateIndex by remember(accountToEdit) { mutableStateOf(initialTemplateIndex) }
+
+    val hasChanges = remember(
+        accountName, holderName, selectedType, customTypeName,
+        selectedNetwork, cardNumber, rawExpiryDigits, selectedTemplateIndex, accountToEdit
+    ) {
+        val initialName = accountToEdit?.name ?: ""
+        val initialHolder = accountToEdit?.holderName ?: ""
+        
+        val initialTypeRaw = accountToEdit?.accountType ?: "CARD"
+        val initialSelectedType = if (ACCOUNT_TYPES.any { it.first == initialTypeRaw }) initialTypeRaw else "OTHER"
+        val initialCustomTypeName = if (initialSelectedType == "OTHER") initialTypeRaw else ""
+        
+        val initialNetwork = accountToEdit?.network?.ifEmpty { "VISA" } ?: "VISA"
+        val initialCardNumber = accountToEdit?.cardNumber ?: ""
+        val initialRawExpiry = accountToEdit?.expiryDate?.filter { it.isDigit() } ?: ""
+        
+        val initialTemplateIdx = CARD_TEMPLATES.indexOfFirst { it.startHex == accountToEdit?.cardColorStart }.coerceAtLeast(0)
+
+        accountName != initialName ||
+        holderName != initialHolder ||
+        selectedType != initialSelectedType ||
+        (selectedType == "OTHER" && customTypeName != initialCustomTypeName) ||
+        (selectedType == "CARD" && (
+            selectedNetwork != initialNetwork ||
+            cardNumber != initialCardNumber ||
+            rawExpiryDigits != initialRawExpiry
+        )) ||
+        selectedTemplateIndex != initialTemplateIdx
+    }
+
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    val handleBack = {
+        if (hasChanges) {
+            showDiscardDialog = true
+        } else {
+            onBack()
+        }
+    }
+
+    BackHandler(enabled = true) {
+        if (showDiscardDialog) {
+            showDiscardDialog = false
+        } else if (showDeleteDialog) {
+            showDeleteDialog = false
+        } else {
+            handleBack()
+        }
+    }
+
+    if (showDiscardDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = {
+                Text(
+                    text = "Discard Changes?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "You have unsaved changes. Are you sure you want to discard them?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDiscardDialog = false
+                        onBack()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ExpenseRed,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Discard", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { showDiscardDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showDeleteDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = {
+                Text(
+                    text = "Delete Account?",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete \"${accountToEdit?.name}\"? All related income and expense transactions will be permanently deleted from history.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        accountToEdit?.let { onDelete?.invoke(it) }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ExpenseRed,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Delete", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { showDeleteDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     // Focus state for validation on touch loss
     var cardNumberTouched by remember { mutableStateOf(false) }
@@ -164,13 +319,24 @@ fun AddAccountScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Add Account",
+                        text = if (isEditMode) "Edit Account" else "Add Account",
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = handleBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    if (isEditMode) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete Account",
+                                tint = ExpenseRed
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -465,11 +631,13 @@ fun AddAccountScreen(
                     (!isOtherType || customTypeName.isNotBlank()) &&
                     (!isCardType || (cardNumber.length == 16 && rawExpiryDigits.length == 4))
 
+            val isSaveEnabled = isFormValid && (!isEditMode || hasChanges)
+
             Button(
                 onClick = {
                     if (isFormValid) {
                         val account = AccountEntity(
-                            id = "acc_${System.currentTimeMillis()}",
+                            id = accountToEdit?.id ?: "acc_${System.currentTimeMillis()}", // Reuse ID in edit mode
                             name = accountName,
                             holderName = holderName,
                             accountType = resolvedAccountTypeLabel,
@@ -482,14 +650,12 @@ fun AddAccountScreen(
                         onSave(account)
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp),
+                modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                enabled = isFormValid
+                enabled = isSaveEnabled
             ) {
-                Text("Create Account", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(if (isEditMode) "Save Changes" else "Create Account", fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
 
             Spacer(modifier = Modifier.height(48.dp))

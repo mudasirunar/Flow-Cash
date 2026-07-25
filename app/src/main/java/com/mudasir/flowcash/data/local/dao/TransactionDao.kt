@@ -14,6 +14,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE isDeleted = 0 ORDER BY timestamp DESC")
     fun getAllTransactionsFlow(): Flow<List<TransactionEntity>>
 
+    @Query("DELETE FROM transactions WHERE accountName = :accountName")
+    suspend fun deleteByAccountName(accountName: String)
+
     @Query("SELECT * FROM transactions WHERE isSynced = 0 AND isDeleted = 0")
     suspend fun getUnsyncedTransactions(): List<TransactionEntity>
 

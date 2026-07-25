@@ -179,6 +179,32 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             repository.deleteTransaction(id)
         }
     }
+
+    // 1. Cascading delete: removes account AND its associated transactions
+    fun deleteAccountAndTransactions(account: AccountEntity) {
+        viewModelScope.launch {
+            // Delete all transactions linked to this account name from Room
+            repository.deleteTransactionsByAccountName(account.name)
+            // Delete the account entity itself
+            repository.deleteAccount(account.id)
+
+            // Reset selected account filter if the active account was deleted
+            if (_selectedAccount.value?.id == account.id) {
+                _selectedAccount.value = null
+            }
+        }
+    }
+
+    // 2. Add or update account entity (Room `insert` using OnConflictStrategy.REPLACE will update existing IDs)
+    fun updateAccount(account: AccountEntity) {
+        viewModelScope.launch {
+            repository.addAccount(account)
+            // If the edited account was currently selected, update the StateFlow reference
+            if (_selectedAccount.value?.id == account.id) {
+                _selectedAccount.value = account
+            }
+        }
+    }
 }
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {

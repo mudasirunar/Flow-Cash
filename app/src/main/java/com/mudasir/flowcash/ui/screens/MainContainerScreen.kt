@@ -66,6 +66,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mudasir.flowcash.data.local.entity.AccountEntity
 import com.mudasir.flowcash.data.model.CategoryType
 import com.mudasir.flowcash.data.model.TransactionType
 import com.mudasir.flowcash.ui.theme.ExpenseRed
@@ -102,6 +103,8 @@ fun MainContainerScreen(
     var showAddModal by remember { mutableStateOf(false) }
     var showAddAccountScreen by remember { mutableStateOf(false) }
 
+    var accountToEdit by remember { mutableStateOf<AccountEntity?>(null) }
+
     val authState by authViewModel.uiState.collectAsState()
     val currency by settingsViewModel.currency.collectAsState()
 
@@ -112,15 +115,26 @@ fun MainContainerScreen(
     if (showAddAccountScreen) {
         BackHandler {
             showAddAccountScreen = false
+            accountToEdit = null
         }
 
         // Fullscreen overlay hides bottom bar & covers status bar properly
         AddAccountScreen(
+            accountToEdit = accountToEdit,
             onSave = { account ->
                 dashboardViewModel.addAccount(account)
                 showAddAccountScreen = false
+                accountToEdit = null
             },
-            onBack = { showAddAccountScreen = false }
+            onDelete = { account ->
+                dashboardViewModel.deleteAccountAndTransactions(account)
+                showAddAccountScreen = false
+                accountToEdit = null
+            },
+            onBack = {
+                showAddAccountScreen = false
+                accountToEdit = null
+            }
         )
     } else {
         Scaffold(
@@ -177,7 +191,14 @@ fun MainContainerScreen(
                             userName = userName,
                             currencySymbol = currency,
                             onAddTransactionClick = { showAddModal = true },
-                            onAddAccountClick = { showAddAccountScreen = true }
+                            onAddAccountClick = {
+                                accountToEdit = null
+                                showAddAccountScreen = true
+                            },
+                            onEditAccountClick = { account ->
+                                accountToEdit = account
+                                showAddAccountScreen = true
+                            }
                         )
                         1 -> TransactionsScreen(
                             dashboardViewModel = dashboardViewModel,

@@ -54,6 +54,10 @@ class TransactionRepository(
         transactionDao.insertTransaction(entity)
     }
 
+    suspend fun deleteTransactionsByAccountName(accountName: String) {
+        transactionDao.deleteByAccountName(accountName)
+    }
+
     suspend fun deleteTransaction(id: String) {
         transactionDao.softDeleteById(id)
     }
