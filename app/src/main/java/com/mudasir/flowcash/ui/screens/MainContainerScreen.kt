@@ -186,6 +186,9 @@ fun MainContainerScreen(
 
         // Upgraded Add Transaction Sheet
         if (showAddModal) {
+            val accounts by dashboardViewModel.accounts.collectAsState()
+            val accountNames = remember(accounts) { accounts.map { it.name }.ifEmpty { listOf("Main Wallet") } }
+
             ModalBottomSheet(
                 onDismissRequest = { showAddModal = false },
                 sheetState = sheetState,
@@ -193,6 +196,7 @@ fun MainContainerScreen(
             ) {
                 AddTransactionSheetContent(
                     currencySymbol = currency,
+                    accountsList = accountNames,
                     onAdd = { title, amount, type, category, account, note ->
                         dashboardViewModel.addTransaction(
                             title = title,
@@ -218,13 +222,14 @@ fun MainContainerScreen(
 @Composable
 fun AddTransactionSheetContent(
     currencySymbol: String = "$",
+    accountsList: List<String> = listOf("Main Wallet"),
     onAdd: (title: String, amount: Double, type: TransactionType, category: CategoryType, account: String, note: String?) -> Unit
 ) {
     var selectedType by remember { mutableStateOf(TransactionType.EXPENSE) }
     var title by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(CategoryType.FOOD) }
-    var selectedAccount by remember { mutableStateOf("Main Wallet") }
+    var selectedAccount by remember { mutableStateOf(accountsList.firstOrNull() ?: "Main Wallet") }
     var noteText by remember { mutableStateOf("") }
 
     Column(
@@ -373,7 +378,7 @@ fun AddTransactionSheetContent(
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Main Wallet", "Savings Account", "Credit Card").forEach { account ->
+            accountsList.forEach { account ->
                 val isSelected = selectedAccount == account
                 Box(
                     modifier = Modifier

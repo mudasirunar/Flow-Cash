@@ -79,10 +79,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
     private val database = FlowCashDatabase.getDatabase(application)
-    private val repository = TransactionRepository(database.transactionDao())
+    private val repository = TransactionRepository(database.transactionDao(), database.budgetDao(), database.accountDao())
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedFilter = MutableStateFlow<TransactionType?>(null)
+    private val _selectedAccount = MutableStateFlow<com.mudasir.flowcash.data.local.entity.AccountEntity?>(null)
 
     val transactions: StateFlow<List<TransactionItem>> = repository.allTransactions.stateIn(
         scope = viewModelScope,
@@ -93,17 +94,48 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val filteredTransactions: StateFlow<List<TransactionItem>> = combine(
         transactions,
         _searchQuery,
-        _selectedFilter
-    ) { txs, query, filter ->
+        _selectedFilter,
+        _selectedAccount
+    ) { txs, query, filter, account ->
         txs.filter { tx ->
             val matchesSearch = query.isBlank() || tx.title.contains(query, ignoreCase = true) || tx.subtitle.contains(query, ignoreCase = true)
             val matchesFilter = filter == null || tx.type == filter
-            matchesSearch && matchesFilter
+            val matchesAccount = account == null || tx.accountName.equals(account.name, ignoreCase = true)
+            matchesSearch && matchesFilter && matchesAccount
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     val selectedFilter: StateFlow<TransactionType?> = _selectedFilter.asStateFlow()
+    val selectedAccount: StateFlow<com.mudasir.flowcash.data.local.entity.AccountEntity?> = _selectedAccount.asStateFlow()
+
+    val accounts: StateFlow<List<com.mudasir.flowcash.data.local.entity.AccountEntity>> = repository.allAccounts.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val budgets: StateFlow<List<com.mudasir.flowcash.data.local.entity.BudgetEntity>> = repository.allBudgets.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    fun updateBudget(categoryName: String, limit: Double) {
+        viewModelScope.launch {
+            repository.setBudget(categoryName, limit)
+        }
+    }
+
+    fun addAccount(name: String, network: String, lastFourDigits: String, expiryDate: String, colorHex: String) {
+        viewModelScope.launch {
+            repository.addAccount(name, network, lastFourDigits, expiryDate, colorHex)
+        }
+    }
+
+    fun setSelectedAccount(account: com.mudasir.flowcash.data.local.entity.AccountEntity?) {
+        _selectedAccount.value = account
+    }
 
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
@@ -111,6 +143,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun setFilter(filter: TransactionType?) {
         _selectedFilter.value = filter
+    }
+
+    fun setSelectedAccount(account: String) {
+        // Obsolete method replaced by Object overload
     }
 
     fun addTransaction(
@@ -145,7 +181,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val themePreferences = ThemePreferences(application)
     private val database = FlowCashDatabase.getDatabase(application)
-    private val repository = TransactionRepository(database.transactionDao())
+    private val repository = TransactionRepository(database.transactionDao(), database.budgetDao(), database.accountDao())
 
     val themeMode: StateFlow<ThemeMode> = themePreferences.themeModeFlow.stateIn(
         scope = viewModelScope,

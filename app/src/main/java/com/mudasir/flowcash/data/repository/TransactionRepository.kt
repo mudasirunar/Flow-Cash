@@ -1,6 +1,10 @@
 package com.mudasir.flowcash.data.repository
 
+import com.mudasir.flowcash.data.local.dao.AccountDao
+import com.mudasir.flowcash.data.local.dao.BudgetDao
 import com.mudasir.flowcash.data.local.dao.TransactionDao
+import com.mudasir.flowcash.data.local.entity.AccountEntity
+import com.mudasir.flowcash.data.local.entity.BudgetEntity
 import com.mudasir.flowcash.data.local.entity.TransactionEntity
 import com.mudasir.flowcash.data.model.CategoryType
 import com.mudasir.flowcash.data.model.TransactionItem
@@ -8,13 +12,21 @@ import com.mudasir.flowcash.data.model.TransactionType
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class TransactionRepository(private val transactionDao: TransactionDao) {
+class TransactionRepository(
+    private val transactionDao: TransactionDao,
+    private val budgetDao: BudgetDao,
+    private val accountDao: AccountDao
+) {
 
     val allTransactions: Flow<List<TransactionItem>> = transactionDao.getAllTransactionsFlow().map { entities ->
         entities.map { it.toDomainModel() }
     }
 
     val unsyncedCount: Flow<Int> = transactionDao.getUnsyncedCountFlow()
+
+    val allBudgets: Flow<List<BudgetEntity>> = budgetDao.getAllBudgets()
+
+    val allAccounts: Flow<List<AccountEntity>> = accountDao.getAllAccounts()
 
     suspend fun addTransaction(
         title: String,
@@ -46,7 +58,39 @@ class TransactionRepository(private val transactionDao: TransactionDao) {
         transactionDao.softDeleteById(id)
     }
 
+    suspend fun setBudget(categoryName: String, limitAmount: Double) {
+        budgetDao.insertBudget(BudgetEntity(categoryName, limitAmount))
+    }
+
+    suspend fun deleteBudget(categoryName: String) {
+        budgetDao.deleteBudget(categoryName)
+    }
+
+    suspend fun addAccount(
+        name: String,
+        network: String,
+        lastFourDigits: String,
+        expiryDate: String,
+        colorHex: String
+    ) {
+        val entity = AccountEntity(
+            id = "acc_${System.currentTimeMillis()}",
+            name = name,
+            network = network,
+            lastFourDigits = lastFourDigits,
+            expiryDate = expiryDate,
+            cardColorHex = colorHex
+        )
+        accountDao.insertAccount(entity)
+    }
+
+    suspend fun deleteAccount(id: String) {
+        accountDao.deleteAccountById(id)
+    }
+
     suspend fun clearDatabase() {
         transactionDao.clearAll()
+        budgetDao.clearAllBudgets()
+        accountDao.clearAllAccounts()
     }
 }
