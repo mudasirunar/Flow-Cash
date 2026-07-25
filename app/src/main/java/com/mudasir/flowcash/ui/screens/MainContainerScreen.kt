@@ -8,16 +8,30 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -30,6 +44,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -41,12 +56,20 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.data.model.CategoryType
 import com.mudasir.flowcash.data.model.TransactionType
+import com.mudasir.flowcash.ui.theme.ExpenseRed
+import com.mudasir.flowcash.ui.theme.IncomeGreen
+import com.mudasir.flowcash.ui.theme.PrimaryIndigo
 import com.mudasir.flowcash.ui.viewmodel.AuthViewModel
 import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 import com.mudasir.flowcash.ui.viewmodel.SettingsViewModel
@@ -83,7 +106,7 @@ fun MainContainerScreen(
     val userName = authState.user?.name ?: "Mudasir Unar"
     val userEmail = authState.user?.email ?: "mudasir@flowcash.io"
 
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     Scaffold(
@@ -109,7 +132,6 @@ fun MainContainerScreen(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            // Directional horizontal slide & fade tab animation
             AnimatedContent(
                 targetState = selectedIndex,
                 transitionSpec = {
@@ -139,14 +161,18 @@ fun MainContainerScreen(
                     0 -> DashboardScreen(
                         dashboardViewModel = dashboardViewModel,
                         userName = userName,
-                        currencySymbol = currency
+                        currencySymbol = currency,
+                        onAddTransactionClick = { showAddModal = true }
                     )
                     1 -> TransactionsScreen(
                         dashboardViewModel = dashboardViewModel,
                         currencySymbol = currency,
                         onAddTransactionClick = { showAddModal = true }
                     )
-                    2 -> AnalyticsScreen(currencySymbol = currency)
+                    2 -> AnalyticsScreen(
+                        dashboardViewModel = dashboardViewModel,
+                        currencySymbol = currency
+                    )
                     3 -> SettingsScreen(
                         settingsViewModel = settingsViewModel,
                         authViewModel = authViewModel,
@@ -158,7 +184,7 @@ fun MainContainerScreen(
             }
         }
 
-        // Add Transaction Modal Bottom Sheet
+        // Upgraded Add Transaction Sheet
         if (showAddModal) {
             ModalBottomSheet(
                 onDismissRequest = { showAddModal = false },
@@ -166,8 +192,16 @@ fun MainContainerScreen(
                 containerColor = MaterialTheme.colorScheme.surface
             ) {
                 AddTransactionSheetContent(
-                    onAdd = { title, amount, type ->
-                        dashboardViewModel.addTransaction(title, amount, type, CategoryType.SHOPPING)
+                    currencySymbol = currency,
+                    onAdd = { title, amount, type, category, account, note ->
+                        dashboardViewModel.addTransaction(
+                            title = title,
+                            amount = amount,
+                            type = type,
+                            category = category,
+                            accountName = account,
+                            note = note
+                        )
                         scope.launch { sheetState.hide() }.invokeOnCompletion {
                             if (!sheetState.isVisible) {
                                 showAddModal = false
@@ -180,63 +214,235 @@ fun MainContainerScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddTransactionSheetContent(
-    onAdd: (title: String, amount: Double, type: TransactionType) -> Unit
+    currencySymbol: String = "$",
+    onAdd: (title: String, amount: Double, type: TransactionType, category: CategoryType, account: String, note: String?) -> Unit
 ) {
+    var selectedType by remember { mutableStateOf(TransactionType.EXPENSE) }
     var title by remember { mutableStateOf("") }
     var amountText by remember { mutableStateOf("") }
-    var isIncome by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf(CategoryType.FOOD) }
+    var selectedAccount by remember { mutableStateOf("Main Wallet") }
+    var noteText by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(24.dp)
+            .padding(horizontal = 24.dp, vertical = 12.dp)
+            .verticalScroll(rememberScrollState())
     ) {
         Text(
-            text = "Add New Transaction",
-            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
+            text = "Add Transaction",
+            style = MaterialTheme.typography.titleLarge.copy(
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // 1. Transaction Type Segmented Toggle
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            listOf(
+                TransactionType.EXPENSE to "Expense",
+                TransactionType.INCOME to "Income",
+                TransactionType.TRANSFER to "Transfer"
+            ).forEach { (type, label) ->
+                val isSelected = selectedType == type
+                val color = when (type) {
+                    TransactionType.INCOME -> IncomeGreen
+                    TransactionType.EXPENSE -> ExpenseRed
+                    TransactionType.TRANSFER -> PrimaryIndigo
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isSelected) color else Color.Transparent)
+                        .clickable { selectedType = type }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // 2. Amount Input
         OutlinedTextField(
-            value = title,
-            onValueChange = { title = it },
-            label = { Text("Title / Description") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            value = amountText,
+            onValueChange = { amountText = it },
+            label = { Text("Amount ($currencySymbol)") },
+            placeholder = { Text("0.00") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // 3. Title / Merchant Input
         OutlinedTextField(
-            value = amountText,
-            onValueChange = { amountText = it },
-            label = { Text("Amount ($)") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            value = title,
+            onValueChange = { title = it },
+            label = { Text("Title / Merchant Name") },
+            placeholder = { Text("e.g. Starbucks, Salary, Amazon") },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            ),
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(20.dp))
 
+        // 4. Category Grid Selector
+        Text(
+            text = "Category",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            CategoryType.entries.forEach { category ->
+                val isSelected = selectedCategory == category
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                        .clickable { selectedCategory = category }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = getCategoryIcon(category),
+                            contentDescription = category.name,
+                            tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = category.name.lowercase().replaceFirstChar { it.uppercase() },
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // 5. Account Selector
+        Text(
+            text = "Account",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("Main Wallet", "Savings Account", "Credit Card").forEach { account ->
+                val isSelected = selectedAccount == account
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(
+                            1.dp,
+                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                            RoundedCornerShape(12.dp)
+                        )
+                        .background(
+                            if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else Color.Transparent
+                        )
+                        .clickable { selectedAccount = account }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = account,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // 6. Note Input
+        OutlinedTextField(
+            value = noteText,
+            onValueChange = { noteText = it },
+            label = { Text("Note / Memo (Optional)") },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // 7. Save Action Button
         Button(
             onClick = {
                 val amt = amountText.toDoubleOrNull() ?: 0.0
-                val type = if (isIncome) TransactionType.INCOME else TransactionType.EXPENSE
                 if (title.isNotBlank() && amt > 0.0) {
-                    onAdd(title, amt, type)
+                    onAdd(title, amt, selectedType, selectedCategory, selectedAccount, noteText.ifBlank { null })
                 }
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp),
-            shape = RoundedCornerShape(14.dp),
+                .height(52.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
         ) {
-            Text("Save Transaction", fontWeight = FontWeight.Bold)
+            Icon(imageVector = Icons.Default.Check, contentDescription = "Save")
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Save to Room Database",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                )
+            )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
     }
 }

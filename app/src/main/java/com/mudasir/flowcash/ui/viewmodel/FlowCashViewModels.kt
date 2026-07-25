@@ -4,13 +4,14 @@ import android.app.Application
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.mudasir.flowcash.data.local.FlowCashDatabase
 import com.mudasir.flowcash.data.model.CategoryType
-import com.mudasir.flowcash.data.model.MockData
 import com.mudasir.flowcash.data.model.TransactionItem
 import com.mudasir.flowcash.data.model.TransactionType
 import com.mudasir.flowcash.data.model.UserProfile
 import com.mudasir.flowcash.data.preferences.ThemeMode
 import com.mudasir.flowcash.data.preferences.ThemePreferences
+import com.mudasir.flowcash.data.repository.TransactionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,7 +41,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
         viewModelScope.launch {
-            kotlinx.coroutines.delay(1000) // Simulate network auth delay
+            kotlinx.coroutines.delay(800)
             val user = UserProfile(
                 id = "usr_101",
                 name = if (email.contains("@")) email.substringBefore("@").replaceFirstChar { it.uppercase() } else "Mudasir",
@@ -59,7 +60,7 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
 
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
         viewModelScope.launch {
-            kotlinx.coroutines.delay(1200)
+            kotlinx.coroutines.delay(1000)
             val user = UserProfile(id = "usr_102", name = name, email = email)
             _uiState.value = AuthUiState(isLoggedIn = true, isLoading = false, user = user)
             onSuccess()
@@ -75,21 +76,22 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     }
 }
 
-@Immutable
-data class DashboardUiState(
-    val transactions: List<TransactionItem> = MockData.sampleTransactions,
-    val searchQuery: String = "",
-    val selectedFilter: TransactionType? = null
-)
-
 class DashboardViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val _transactions = MutableStateFlow(MockData.sampleTransactions)
+    private val database = FlowCashDatabase.getDatabase(application)
+    private val repository = TransactionRepository(database.transactionDao())
+
     private val _searchQuery = MutableStateFlow("")
     private val _selectedFilter = MutableStateFlow<TransactionType?>(null)
 
+    val transactions: StateFlow<List<TransactionItem>> = repository.allTransactions.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     val filteredTransactions: StateFlow<List<TransactionItem>> = combine(
-        _transactions,
+        transactions,
         _searchQuery,
         _selectedFilter
     ) { txs, query, filter ->
@@ -98,7 +100,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             val matchesFilter = filter == null || tx.type == filter
             matchesSearch && matchesFilter
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), MockData.sampleTransactions)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     val selectedFilter: StateFlow<TransactionType?> = _selectedFilter.asStateFlow()
@@ -115,25 +117,35 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         title: String,
         amount: Double,
         type: TransactionType,
-        category: CategoryType
+        category: CategoryType,
+        accountName: String = "Main Wallet",
+        note: String? = null
     ) {
-        val newTx = TransactionItem(
-            id = "tx_${System.currentTimeMillis()}",
-            title = title,
-            subtitle = "Manual entry",
-            amount = amount,
-            type = type,
-            category = category,
-            dateFormatted = "Just now",
-            timestamp = System.currentTimeMillis()
-        )
-        _transactions.value = listOf(newTx) + _transactions.value
+        viewModelScope.launch {
+            repository.addTransaction(
+                title = title,
+                subtitle = "Manual entry",
+                amount = amount,
+                type = type,
+                category = category,
+                accountName = accountName,
+                note = note
+            )
+        }
+    }
+
+    fun deleteTransaction(id: String) {
+        viewModelScope.launch {
+            repository.deleteTransaction(id)
+        }
     }
 }
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val themePreferences = ThemePreferences(application)
+    private val database = FlowCashDatabase.getDatabase(application)
+    private val repository = TransactionRepository(database.transactionDao())
 
     val themeMode: StateFlow<ThemeMode> = themePreferences.themeModeFlow.stateIn(
         scope = viewModelScope,
@@ -153,6 +165,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         initialValue = false
     )
 
+    val unsyncedCount: StateFlow<Int> = repository.unsyncedCount.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 0
+    )
+
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             themePreferences.setThemeMode(mode)
@@ -168,6 +186,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun setBiometricsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             themePreferences.setBiometricsEnabled(enabled)
+        }
+    }
+
+    fun clearLocalData() {
+        viewModelScope.launch {
+            repository.clearDatabase()
         }
     }
 }

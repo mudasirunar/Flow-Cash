@@ -37,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,7 +48,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.data.model.CategoryType
-import com.mudasir.flowcash.data.model.MockData
 import com.mudasir.flowcash.data.model.TransactionItem
 import com.mudasir.flowcash.data.model.TransactionType
 import com.mudasir.flowcash.ui.theme.ExpenseRed
@@ -59,12 +59,23 @@ import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 fun DashboardScreen(
     dashboardViewModel: DashboardViewModel,
     userName: String = "Mudasir",
-    currencySymbol: String = "$"
+    currencySymbol: String = "$",
+    onAddTransactionClick: () -> Unit
 ) {
+    val allTransactions by dashboardViewModel.transactions.collectAsState()
     val transactions by dashboardViewModel.filteredTransactions.collectAsState()
     val selectedFilter by dashboardViewModel.selectedFilter.collectAsState()
 
-    val summary = MockData.sampleSummary
+    // Calculate live cash flow metrics from Room DB
+    val totalIncome = remember(allTransactions) {
+        allTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+    }
+    val totalExpense = remember(allTransactions) {
+        allTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+    }
+    val netBalance = remember(totalIncome, totalExpense) {
+        totalIncome - totalExpense
+    }
 
     Column(
         modifier = Modifier
@@ -111,7 +122,7 @@ fun DashboardScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Net Cash Flow Balance Card
+        // Net Cash Flow Balance Card (Dynamic from Room DB)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -154,7 +165,7 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = "$currencySymbol${String.format("%,.2f", summary.totalBalance)}",
+                    text = "$currencySymbol${String.format("%,.2f", netBalance)}",
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.ExtraBold,
                         color = Color.White,
@@ -194,7 +205,7 @@ fun DashboardScreen(
                                 )
                             )
                             Text(
-                                text = "$currencySymbol${String.format("%,.2f", summary.monthlyIncome)}",
+                                text = "$currencySymbol${String.format("%,.2f", totalIncome)}",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
@@ -228,7 +239,7 @@ fun DashboardScreen(
                                 )
                             )
                             Text(
-                                text = "$currencySymbol${String.format("%,.2f", summary.monthlyExpense)}",
+                                text = "$currencySymbol${String.format("%,.2f", totalExpense)}",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold
@@ -304,16 +315,50 @@ fun DashboardScreen(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Transaction List with Stable Keys (Compose Performance Rule)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            items(
-                items = transactions,
-                key = { transaction -> transaction.id }
-            ) { transaction ->
-                TransactionRowItem(transaction = transaction, currencySymbol = currencySymbol)
+        if (transactions.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(vertical = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "No Activity Registered Yet",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Start by recording your first transaction flow.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    androidx.compose.material3.Button(
+                        onClick = onAddTransactionClick,
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Record First Transaction")
+                    }
+                }
+            }
+        } else {
+            // Transaction List with Stable Keys
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(
+                    items = transactions,
+                    key = { transaction -> transaction.id }
+                ) { transaction ->
+                    TransactionRowItem(transaction = transaction, currencySymbol = currencySymbol)
+                }
             }
         }
     }
@@ -375,7 +420,7 @@ fun TransactionRowItem(
                         )
                     )
                     Text(
-                        text = transaction.dateFormatted,
+                        text = "${transaction.accountName} • ${transaction.dateFormatted}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

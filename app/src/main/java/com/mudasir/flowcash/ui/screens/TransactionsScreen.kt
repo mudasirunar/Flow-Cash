@@ -106,19 +106,30 @@ fun TransactionsScreen(
                         .padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
                         Text(
-                            text = "No transactions found",
+                            text = "No Transactions Found",
                             style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                         )
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Try adjusting your search query",
+                            text = "Try adjusting your search query, or record a new transaction.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        androidx.compose.material3.Button(
+                            onClick = onAddTransactionClick,
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text("Record Transaction")
+                        }
                     }
                 }
             } else {
