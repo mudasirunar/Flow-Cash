@@ -1,5 +1,13 @@
 package com.mudasir.flowcash.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -8,9 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -101,25 +109,52 @@ fun MainContainerScreen(
         }
     ) { innerPadding ->
         Box(modifier = Modifier.padding(innerPadding)) {
-            when (selectedIndex) {
-                0 -> DashboardScreen(
-                    dashboardViewModel = dashboardViewModel,
-                    userName = userName,
-                    currencySymbol = currency
-                )
-                1 -> TransactionsScreen(
-                    dashboardViewModel = dashboardViewModel,
-                    currencySymbol = currency,
-                    onAddTransactionClick = { showAddModal = true }
-                )
-                2 -> AnalyticsScreen(currencySymbol = currency)
-                3 -> SettingsScreen(
-                    settingsViewModel = settingsViewModel,
-                    authViewModel = authViewModel,
-                    userName = userName,
-                    userEmail = userEmail,
-                    onLogoutClick = onLogoutClick
-                )
+            // Directional horizontal slide & fade tab animation
+            AnimatedContent(
+                targetState = selectedIndex,
+                transitionSpec = {
+                    if (targetState > initialState) {
+                        (slideInHorizontally(
+                            initialOffsetX = { width -> width / 4 },
+                            animationSpec = tween(280, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(250))) togetherWith
+                                (slideOutHorizontally(
+                                    targetOffsetX = { width -> -width / 4 },
+                                    animationSpec = tween(280, easing = FastOutSlowInEasing)
+                                ) + fadeOut(animationSpec = tween(220)))
+                    } else {
+                        (slideInHorizontally(
+                            initialOffsetX = { width -> -width / 4 },
+                            animationSpec = tween(280, easing = FastOutSlowInEasing)
+                        ) + fadeIn(animationSpec = tween(250))) togetherWith
+                                (slideOutHorizontally(
+                                    targetOffsetX = { width -> width / 4 },
+                                    animationSpec = tween(280, easing = FastOutSlowInEasing)
+                                ) + fadeOut(animationSpec = tween(220)))
+                    }
+                },
+                label = "BottomTabTransition"
+            ) { targetIndex ->
+                when (targetIndex) {
+                    0 -> DashboardScreen(
+                        dashboardViewModel = dashboardViewModel,
+                        userName = userName,
+                        currencySymbol = currency
+                    )
+                    1 -> TransactionsScreen(
+                        dashboardViewModel = dashboardViewModel,
+                        currencySymbol = currency,
+                        onAddTransactionClick = { showAddModal = true }
+                    )
+                    2 -> AnalyticsScreen(currencySymbol = currency)
+                    3 -> SettingsScreen(
+                        settingsViewModel = settingsViewModel,
+                        authViewModel = authViewModel,
+                        userName = userName,
+                        userEmail = userEmail,
+                        onLogoutClick = onLogoutClick
+                    )
+                }
             }
         }
 

@@ -4,6 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,7 +57,13 @@ class MainActivity : ComponentActivity() {
                     navController = navController,
                     startDestination = "splash"
                 ) {
-                    composable("splash") {
+                    composable(
+                        route = "splash",
+                        exitTransition = {
+                            scaleOut(targetScale = 1.08f, animationSpec = tween(350, easing = FastOutSlowInEasing)) +
+                                    fadeOut(animationSpec = tween(300))
+                        }
+                    ) {
                         SplashScreen(
                             onSplashFinished = {
                                 navController.navigate("login") {
@@ -58,7 +73,21 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable("login") {
+                    composable(
+                        route = "login",
+                        enterTransition = {
+                            scaleIn(initialScale = 0.92f, animationSpec = tween(350, easing = FastOutSlowInEasing)) +
+                                    fadeIn(animationSpec = tween(350))
+                        },
+                        exitTransition = {
+                            slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                                    fadeOut(animationSpec = tween(300))
+                        },
+                        popEnterTransition = {
+                            slideInHorizontally(initialOffsetX = { -it / 3 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                                    fadeIn(animationSpec = tween(300))
+                        }
+                    ) {
                         LoginScreen(
                             authViewModel = authViewModel,
                             onNavigateToSignUp = {
@@ -72,7 +101,21 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable("signup") {
+                    composable(
+                        route = "signup",
+                        enterTransition = {
+                            slideInHorizontally(initialOffsetX = { it / 3 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                                    fadeIn(animationSpec = tween(300))
+                        },
+                        exitTransition = {
+                            slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                                    fadeOut(animationSpec = tween(300))
+                        },
+                        popExitTransition = {
+                            slideOutHorizontally(targetOffsetX = { it / 3 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                                    fadeOut(animationSpec = tween(300))
+                        }
+                    ) {
                         SignUpScreen(
                             authViewModel = authViewModel,
                             onNavigateToLogin = {
@@ -86,7 +129,18 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                    composable("main") {
+                    composable(
+                        route = "main",
+                        enterTransition = {
+                            slideInVertically(initialOffsetY = { it / 4 }, animationSpec = tween(400, easing = FastOutSlowInEasing)) +
+                                    scaleIn(initialScale = 0.95f, animationSpec = tween(400, easing = FastOutSlowInEasing)) +
+                                    fadeIn(animationSpec = tween(350))
+                        },
+                        exitTransition = {
+                            scaleOut(targetScale = 0.95f, animationSpec = tween(300)) +
+                                    fadeOut(animationSpec = tween(300))
+                        }
+                    ) {
                         MainContainerScreen(
                             authViewModel = authViewModel,
                             dashboardViewModel = dashboardViewModel,
