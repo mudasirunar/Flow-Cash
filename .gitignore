@@ -1,17 +1,49 @@
+# Built application & Gradle artifacts
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+.gradle/
+/build/
+/*/build/
+/captures/
+.externalNativeBuild/
+.cxx/
+gradle-app.setting
+
+# Local configuration & sensitive files
 local.properties
+/local.properties
+secrets.properties
+*.keystore
+*.jks
+*.p12
+*.key
+
+# Kotlin compiler & daemon caches
+.kotlin/
+.kotlin-ic/
+hs_err_pid*.log
+replay_pid*.log
+
+# Android Studio / IntelliJ IDE files
+.idea/
+*.iws
+*.ipr
+out/
+
+# Log files & temporary system files
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+crashlytics-build.properties
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Ehthumbs.db
+.Spotlight-V100
+.Trashes
+
+# Local agent & documentation folders
 /.agents
 /docs
