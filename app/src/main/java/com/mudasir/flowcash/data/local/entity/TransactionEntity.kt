@@ -49,6 +49,7 @@ data class TransactionEntity(
             dateFormatted = dateFormatted,
             timestamp = timestamp,
             accountName = accountName,
+            note = note,
             createdAt = createdAt,
             updatedAt = updatedAt
         )
@@ -57,7 +58,7 @@ data class TransactionEntity(
     companion object {
         fun fromDomainModel(
             item: TransactionItem,
-            note: String? = null,
+            note: String? = item.note,
             isSynced: Boolean = false
         ): TransactionEntity {
             return TransactionEntity(

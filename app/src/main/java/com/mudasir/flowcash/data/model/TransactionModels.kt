@@ -30,6 +30,7 @@ data class TransactionItem(
     val dateFormatted: String,
     val timestamp: Long,
     val accountName: String = "Main Wallet",
+    val note: String? = null,
     val createdAt: Long = timestamp,
     val updatedAt: Long = timestamp
 )

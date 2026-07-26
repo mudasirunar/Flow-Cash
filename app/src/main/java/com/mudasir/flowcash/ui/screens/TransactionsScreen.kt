@@ -38,13 +38,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
+import com.mudasir.flowcash.data.model.TransactionItem
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionsScreen(
     dashboardViewModel: DashboardViewModel,
     currencySymbol: String = "$",
-    onAddTransactionClick: () -> Unit
+    onAddTransactionClick: () -> Unit,
+    onTransactionClick: (TransactionItem) -> Unit = {},
+    onTransactionLongClick: (TransactionItem) -> Unit = {}
 ) {
     val transactions by dashboardViewModel.filteredTransactions.collectAsState()
     val searchQuery by dashboardViewModel.searchQuery.collectAsState()
@@ -153,7 +156,13 @@ fun TransactionsScreen(
                         items = transactions,
                         key = { tx -> tx.id }
                     ) { tx ->
-                        TransactionRowItem(transaction = tx, currencySymbol = currencySymbol, timeTicker = timeTicker)
+                        TransactionRowItem(
+                            transaction = tx,
+                            currencySymbol = currencySymbol,
+                            timeTicker = timeTicker,
+                            onClick = { onTransactionClick(tx) },
+                            onLongClick = { onTransactionLongClick(tx) }
+                        )
                     }
                 }
             }

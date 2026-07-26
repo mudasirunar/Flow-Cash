@@ -12,6 +12,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -112,7 +114,9 @@ fun DashboardScreen(
     currencySymbol: String = "$",
     onAddTransactionClick: (TransactionType?) -> Unit,
     onAddAccountClick: () -> Unit = {},
-    onEditAccountClick: (AccountEntity) -> Unit = {}
+    onEditAccountClick: (AccountEntity) -> Unit = {},
+    onTransactionClick: (TransactionItem) -> Unit = {},
+    onTransactionLongClick: (TransactionItem) -> Unit = {}
 ) {
     val allTransactions by dashboardViewModel.transactions.collectAsState()
     val transactions by dashboardViewModel.filteredTransactions.collectAsState()
@@ -425,7 +429,13 @@ fun DashboardScreen(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(items = transactions, key = { it.id }) { tx ->
-                            TransactionRowItem(transaction = tx, currencySymbol = currencySymbol, timeTicker = timeTicker)
+                            TransactionRowItem(
+                                transaction = tx,
+                                currencySymbol = currencySymbol,
+                                timeTicker = timeTicker,
+                                onClick = { onTransactionClick(tx) },
+                                onLongClick = { onTransactionLongClick(tx) }
+                            )
                         }
                     }
                 }
@@ -691,7 +701,13 @@ fun DashboardScreen(
                 }
             } else {
                 items(items = transactions, key = { it.id }) { tx ->
-                    TransactionRowItem(transaction = tx, currencySymbol = currencySymbol, timeTicker = timeTicker)
+                    TransactionRowItem(
+                        transaction = tx,
+                        currencySymbol = currencySymbol,
+                        timeTicker = timeTicker,
+                        onClick = { onTransactionClick(tx) },
+                        onLongClick = { onTransactionLongClick(tx) }
+                    )
                     Spacer(modifier = Modifier.height(10.dp))
                 }
             }
@@ -1323,8 +1339,15 @@ private fun IncomeExpenseMetricsRow(totalIncome: Double, totalExpense: Double, c
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun TransactionRowItem(transaction: TransactionItem, currencySymbol: String, timeTicker: Int = 0) {
+fun TransactionRowItem(
+    transaction: TransactionItem,
+    currencySymbol: String,
+    timeTicker: Int = 0,
+    onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {}
+) {
     val isIncome = transaction.type == TransactionType.INCOME
     val relativeTime = remember(transaction.timestamp, timeTicker) {
         formatRelativeTime(transaction.timestamp)
@@ -1335,6 +1358,10 @@ fun TransactionRowItem(transaction: TransactionItem, currencySymbol: String, tim
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(14.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

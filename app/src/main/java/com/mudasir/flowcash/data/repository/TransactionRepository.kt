@@ -54,6 +54,37 @@ class TransactionRepository(
         transactionDao.insertTransaction(entity)
     }
 
+    suspend fun updateTransaction(
+        id: String,
+        title: String,
+        subtitle: String = "",
+        amount: Double,
+        type: TransactionType,
+        category: CategoryType,
+        accountName: String = "Main Wallet",
+        note: String? = null,
+        createdAt: Long,
+        timestamp: Long
+    ) {
+        val entity = TransactionEntity(
+            id = id,
+            title = title,
+            subtitle = subtitle.ifBlank { "Manual Entry" },
+            amount = amount,
+            type = type.name,
+            category = category.name,
+            accountName = accountName,
+            note = note,
+            dateFormatted = "Just now",
+            timestamp = timestamp,
+            createdAt = createdAt,
+            updatedAt = System.currentTimeMillis(),
+            isSynced = false,
+            isDeleted = false
+        )
+        transactionDao.insertTransaction(entity)
+    }
+
     suspend fun deleteTransactionsByAccountName(accountName: String) {
         transactionDao.deleteByAccountName(accountName)
     }

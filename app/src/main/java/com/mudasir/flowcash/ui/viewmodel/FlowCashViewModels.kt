@@ -209,6 +209,34 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun updateTransaction(
+        id: String,
+        title: String,
+        amount: Double,
+        type: TransactionType,
+        category: CategoryType,
+        accountName: String = "Main Wallet",
+        note: String? = null,
+        subtitle: String = "Manual entry",
+        createdAt: Long,
+        timestamp: Long
+    ) {
+        viewModelScope.launch {
+            repository.updateTransaction(
+                id = id,
+                title = title,
+                subtitle = subtitle,
+                amount = amount,
+                type = type,
+                category = category,
+                accountName = accountName,
+                note = note,
+                createdAt = createdAt,
+                timestamp = timestamp
+            )
+        }
+    }
+
     fun deleteTransaction(id: String) {
         viewModelScope.launch {
             repository.deleteTransaction(id)
