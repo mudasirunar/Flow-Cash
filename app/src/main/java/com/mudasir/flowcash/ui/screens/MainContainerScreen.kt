@@ -100,6 +100,8 @@ import com.mudasir.flowcash.data.model.TransactionItem
 import com.mudasir.flowcash.ui.theme.ExpenseRed
 import com.mudasir.flowcash.ui.theme.IncomeGreen
 import com.mudasir.flowcash.ui.theme.PrimaryIndigo
+import androidx.compose.ui.platform.LocalContext
+import com.mudasir.flowcash.util.BiometricAuthHelper
 import com.mudasir.flowcash.ui.viewmodel.AuthViewModel
 import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 import com.mudasir.flowcash.ui.viewmodel.SettingsViewModel
@@ -144,6 +146,11 @@ fun MainContainerScreen(
     var selectedTransactionForMenu by remember { mutableStateOf<TransactionItem?>(null) }
     var transactionToDelete by remember { mutableStateOf<TransactionItem?>(null) }
     var transactionToEdit by remember { mutableStateOf<TransactionItem?>(null) }
+
+    val context = LocalContext.current
+    val biometricsEnabled by settingsViewModel.biometricsEnabled.collectAsState()
+    var biometricAlertTitle by remember { mutableStateOf<String?>(null) }
+    var biometricAlertMessage by remember { mutableStateOf<String?>(null) }
 
     val accountToEdit = remember(editingAccountId, accounts) {
         accounts.find { it.id == editingAccountId }
@@ -259,6 +266,7 @@ fun MainContainerScreen(
                     when (targetIndex) {
                         0 -> DashboardScreen(
                             dashboardViewModel = dashboardViewModel,
+                            settingsViewModel = settingsViewModel,
                             userName = userName,
                             userEmail = userEmail,
                             profilePicUrl = authState.user?.profilePicUrl,
@@ -277,8 +285,24 @@ fun MainContainerScreen(
                                 showAddAccountScreen = true
                             },
                             onEditAccountClick = { account ->
-                                editingAccountId = account.id
-                                showAddAccountScreen = true
+                                if (biometricsEnabled) {
+                                    BiometricAuthHelper.promptBiometricAuth(
+                                        context = context,
+                                        title = "Edit Card Security",
+                                        subtitle = "Scan fingerprint or Face ID to edit ${account.name} details",
+                                        onSuccess = {
+                                            editingAccountId = account.id
+                                            showAddAccountScreen = true
+                                        },
+                                        onError = { err ->
+                                            biometricAlertTitle = "Authentication Required"
+                                            biometricAlertMessage = err
+                                        }
+                                    )
+                                } else {
+                                    editingAccountId = account.id
+                                    showAddAccountScreen = true
+                                }
                             },
                             onTransactionClick = { tx -> selectedTransactionForDetails = tx },
                             onTransactionLongClick = { tx -> selectedTransactionForMenu = tx }
@@ -323,6 +347,32 @@ fun MainContainerScreen(
         isNewUser = welcomeEvent?.isNewUser ?: false,
         onDismiss = { authViewModel.clearWelcomeEvent() }
     )
+
+    if (biometricAlertMessage != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { biometricAlertMessage = null },
+            title = {
+                Text(
+                    text = biometricAlertTitle ?: "Biometric Security",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = biometricAlertMessage ?: "",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { biometricAlertMessage = null },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("OK", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
+    }
 
     if (showAccountRequiredDialog) {
         androidx.compose.material3.AlertDialog(

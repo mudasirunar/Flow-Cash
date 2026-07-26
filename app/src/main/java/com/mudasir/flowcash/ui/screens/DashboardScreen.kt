@@ -117,6 +117,11 @@ import com.mudasir.flowcash.ui.components.UserProfileAvatar
 import com.mudasir.flowcash.ui.theme.ExpenseRed
 import com.mudasir.flowcash.ui.theme.IncomeGreen
 import com.mudasir.flowcash.ui.theme.PrimaryIndigo
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.material3.OutlinedButton
+import com.mudasir.flowcash.ui.viewmodel.SettingsViewModel
+import com.mudasir.flowcash.util.BiometricAuthHelper
 import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 import kotlin.math.absoluteValue
 
@@ -133,8 +138,16 @@ fun DashboardScreen(
     onAddAccountClick: () -> Unit = {},
     onEditAccountClick: (AccountEntity) -> Unit = {},
     onTransactionClick: (TransactionItem) -> Unit = {},
-    onTransactionLongClick: (TransactionItem) -> Unit = {}
+    onTransactionLongClick: (TransactionItem) -> Unit = {},
+    settingsViewModel: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    val context = LocalContext.current
+    val biometricsEnabled by settingsViewModel.biometricsEnabled.collectAsState()
+
+    var showBiometricSetupDialog by remember { mutableStateOf(false) }
+    var biometricAlertTitle by remember { mutableStateOf<String?>(null) }
+    var biometricAlertMessage by remember { mutableStateOf<String?>(null) }
+
     val allTransactions by dashboardViewModel.transactions.collectAsState()
     val transactions by dashboardViewModel.filteredTransactions.collectAsState()
     val selectedFilter by dashboardViewModel.selectedFilter.collectAsState()
@@ -151,7 +164,34 @@ fun DashboardScreen(
     val accounts = remember(accountsState) { accountsState ?: emptyList() }
     val isLoading by dashboardViewModel.isLoading.collectAsState()
 
-    var isDataVisible by rememberSaveable { mutableStateOf(true) }
+    val isDataVisible by dashboardViewModel.isDataVisible.collectAsState()
+
+    val handleToggleVisibility = {
+        if (isDataVisible) {
+            // Hiding balances
+            if (biometricsEnabled) {
+                dashboardViewModel.setDataVisible(false)
+            } else {
+                showBiometricSetupDialog = true
+            }
+        } else {
+            // Unhiding balances
+            if (biometricsEnabled) {
+                BiometricAuthHelper.promptBiometricAuth(
+                    context = context,
+                    title = "Unhide Financial Balances",
+                    subtitle = "Scan fingerprint or Face ID to reveal your balances",
+                    onSuccess = { dashboardViewModel.setDataVisible(true) },
+                    onError = { err ->
+                        biometricAlertTitle = "Biometric Verification Failed"
+                        biometricAlertMessage = err
+                    }
+                )
+            } else {
+                showBiometricSetupDialog = true
+            }
+        }
+    }
     var showBottomSheetSelector by rememberSaveable { mutableStateOf(false) }
     var deletingAccountId by rememberSaveable { mutableStateOf<String?>(null) }
     val accountToDelete = remember(deletingAccountId, accounts) {
@@ -322,7 +362,7 @@ fun DashboardScreen(
                                             totalExpense = totalExpense,
                                             currencySymbol = currencySymbol,
                                             isDataVisible = isDataVisible,
-                                            onToggleVisibility = { isDataVisible = !isDataVisible },
+                                            onToggleVisibility = handleToggleVisibility,
                                             onClick = { showBottomSheetSelector = true }
                                         )
                                     }
@@ -351,7 +391,7 @@ fun DashboardScreen(
                                             totalExpense = accExpense,
                                             currencySymbol = currencySymbol,
                                             isDataVisible = isDataVisible,
-                                            onToggleVisibility = { isDataVisible = !isDataVisible },
+                                            onToggleVisibility = handleToggleVisibility,
                                             onClick = { showBottomSheetSelector = true },
                                             onEditClick = { onEditAccountClick(account) }
                                         )
@@ -607,7 +647,7 @@ fun DashboardScreen(
                                         totalExpense = totalExpense,
                                         currencySymbol = currencySymbol,
                                         isDataVisible = isDataVisible,
-                                        onToggleVisibility = { isDataVisible = !isDataVisible },
+                                        onToggleVisibility = handleToggleVisibility,
                                         onClick = { showBottomSheetSelector = true }
                                     )
                                 }
@@ -636,7 +676,7 @@ fun DashboardScreen(
                                         totalExpense = accExpense,
                                         currencySymbol = currencySymbol,
                                         isDataVisible = isDataVisible,
-                                        onToggleVisibility = { isDataVisible = !isDataVisible },
+                                        onToggleVisibility = handleToggleVisibility,
                                         onClick = { showBottomSheetSelector = true },
                                         onEditClick = { onEditAccountClick(account) }
                                     )
@@ -869,6 +909,85 @@ fun DashboardScreen(
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showBiometricSetupDialog) {
+        val targetVisibility = !isDataVisible
+        val actionText = if (targetVisibility) "unhide" else "hide"
+        AlertDialog(
+            onDismissRequest = { showBiometricSetupDialog = false },
+            title = {
+                Text(
+                    text = "Biometric Setup Required 🔒",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "To $actionText sensitive financial numbers and balance details, please configure Biometric Protection. This activates fingerprint protection for your account.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBiometricSetupDialog = false
+                        BiometricAuthHelper.promptBiometricAuth(
+                            context = context,
+                            title = "Configure Biometric Security",
+                            subtitle = "Scan fingerprint to activate security and $actionText balances",
+                            onSuccess = {
+                                settingsViewModel.setBiometricsEnabled(true)
+                                dashboardViewModel.setDataVisible(targetVisibility)
+                                biometricAlertTitle = "Biometric Lock Activated! 🔒"
+                                biometricAlertMessage = "Your fingerprint is configured and Biometric Protection is turned ON in Settings."
+                            },
+                            onError = { err ->
+                                biometricAlertTitle = "Biometric Setup Failed"
+                                biometricAlertMessage = err
+                            }
+                        )
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Scan Fingerprint & Protect", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showBiometricSetupDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (biometricAlertMessage != null) {
+        AlertDialog(
+            onDismissRequest = { biometricAlertMessage = null },
+            title = {
+                Text(
+                    text = biometricAlertTitle ?: "Biometric Security",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = biometricAlertMessage ?: "",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { biometricAlertMessage = null },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("OK", fontWeight = FontWeight.Bold)
                 }
             }
         )

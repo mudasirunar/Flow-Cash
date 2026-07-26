@@ -53,9 +53,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import com.mudasir.flowcash.util.BiometricAuthHelper
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -124,12 +127,18 @@ fun SettingsScreen(
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
 
-    val avatarBgColor = remember(userName, userEmail) {
-        UserAvatarUtils.getAvatarColorForUser(userName, userEmail)
+    val context = LocalContext.current
+    val biometricStatus = remember(context) {
+        BiometricAuthHelper.getBiometricStatus(context)
     }
-    val initials = remember(userName) {
-        UserAvatarUtils.getUserInitials(userName)
+    val isBiometricReady = remember(context) {
+        BiometricAuthHelper.isBiometricAvailable(context)
     }
+
+    var showBiometricEnableDialog by remember { mutableStateOf(false) }
+    var showBiometricDisableDialog by remember { mutableStateOf(false) }
+    var biometricFeedbackTitle by remember { mutableStateOf<String?>(null) }
+    var biometricFeedbackMessage by remember { mutableStateOf<String?>(null) }
 
     val modernSwitchColors = SwitchDefaults.colors(
         checkedThumbColor = Color.White,
@@ -279,22 +288,42 @@ fun SettingsScreen(
                             )
                         }
                         Spacer(modifier = Modifier.width(12.dp))
+                        val biometricSubtitle = when (biometricStatus) {
+                            BiometricAuthHelper.BiometricStatus.AVAILABLE -> "Require fingerprint or Face ID to unlock balances and cards"
+                            BiometricAuthHelper.BiometricStatus.NONE_ENROLLED -> "No fingerprint enrolled on device — tap to setup in Settings"
+                            else -> "Biometric hardware unavailable on this device"
+                        }
+
                         Column {
                             Text(
                                 text = "Biometric Lock",
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                             )
                             Text(
-                                text = "Require fingerprint or Face ID to open app",
+                                text = biometricSubtitle,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (isBiometricReady) MaterialTheme.colorScheme.onSurfaceVariant else ExpenseRed
                             )
                         }
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Switch(
                         checked = biometricsEnabled,
-                        onCheckedChange = { settingsViewModel.setBiometricsEnabled(it) },
+                        onCheckedChange = { targetState ->
+                            if (targetState) {
+                                if (!isBiometricReady) {
+                                    biometricFeedbackTitle = "Biometrics Unavailable"
+                                    biometricFeedbackMessage = when (biometricStatus) {
+                                        BiometricAuthHelper.BiometricStatus.NONE_ENROLLED -> "No fingerprint or Face ID enrolled on this device. Please add a fingerprint in Android Settings > Security first."
+                                        else -> "Biometric hardware is not available on this device."
+                                    }
+                                } else {
+                                    showBiometricEnableDialog = true
+                                }
+                            } else {
+                                showBiometricDisableDialog = true
+                            }
+                        },
                         colors = modernSwitchColors
                     )
                 }
@@ -631,6 +660,132 @@ fun SettingsScreen(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    if (showBiometricEnableDialog) {
+        AlertDialog(
+            onDismissRequest = { showBiometricEnableDialog = false },
+            title = {
+                Text(
+                    text = "Enable Biometric Protection",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "Scan your fingerprint or Face ID to activate Biometric Protection for your financial balances.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBiometricEnableDialog = false
+                        BiometricAuthHelper.promptBiometricAuth(
+                            context = context,
+                            title = "Configure Biometric Lock",
+                            subtitle = "Scan fingerprint to activate biometric security",
+                            onSuccess = {
+                                settingsViewModel.setBiometricsEnabled(true)
+                                biometricFeedbackTitle = "Biometric Lock Activated! 🔒"
+                                biometricFeedbackMessage = "Your fingerprint is now configured. You can safely hide and unhide your sensitive balances on your dashboard."
+                            },
+                            onError = { err ->
+                                biometricFeedbackTitle = "Biometric Setup Failed"
+                                biometricFeedbackMessage = err
+                            }
+                        )
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Scan Fingerprint", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showBiometricEnableDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showBiometricDisableDialog) {
+        AlertDialog(
+            onDismissRequest = { showBiometricDisableDialog = false },
+            title = {
+                Text(
+                    text = "Disable Biometric Lock",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "Scan your fingerprint or Face ID to confirm disabling Biometric Protection.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBiometricDisableDialog = false
+                        BiometricAuthHelper.promptBiometricAuth(
+                            context = context,
+                            title = "Disable Biometric Lock",
+                            subtitle = "Scan fingerprint to confirm disabling security",
+                            onSuccess = {
+                                settingsViewModel.setBiometricsEnabled(false)
+                                biometricFeedbackTitle = "Biometric Protection Disabled"
+                                biometricFeedbackMessage = "Biometric security is turned off. Balances can now be unhidden without fingerprint verification."
+                            },
+                            onError = { err ->
+                                biometricFeedbackTitle = "Verification Failed"
+                                biometricFeedbackMessage = err
+                            }
+                        )
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Confirm & Scan", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { showBiometricDisableDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (biometricFeedbackMessage != null) {
+        AlertDialog(
+            onDismissRequest = { biometricFeedbackMessage = null },
+            title = {
+                Text(
+                    text = biometricFeedbackTitle ?: "Biometric Security",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = biometricFeedbackMessage ?: "",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { biometricFeedbackMessage = null },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("OK", fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
 
     // Logout Confirmation Dialog

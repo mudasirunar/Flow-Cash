@@ -208,6 +208,8 @@ class AuthViewModel @JvmOverloads constructor(
             val db = FlowCashDatabase.getDatabase(getApplication())
             val repo = TransactionRepository(db.transactionDao(), db.budgetDao(), db.accountDao())
             repo.clearLocalDatabase()
+            val userPreferences = UserPreferences(getApplication())
+            userPreferences.clearUserPreferences()
         }
         _uiState.value = AuthUiState(isLoggedIn = false, user = null)
     }
@@ -280,6 +282,17 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _searchQuery = MutableStateFlow("")
     private val _selectedFilter = MutableStateFlow<TransactionType?>(null)
     private val _selectedAccount = MutableStateFlow<AccountEntity?>(null)
+    val isDataVisible: StateFlow<Boolean> = userPreferences.isDataVisibleFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = true
+    )
+
+    fun setDataVisible(visible: Boolean) {
+        viewModelScope.launch {
+            userPreferences.setDataVisible(visible)
+        }
+    }
 
     private val _isInitialSelectedAccountLoaded = MutableStateFlow(false)
 

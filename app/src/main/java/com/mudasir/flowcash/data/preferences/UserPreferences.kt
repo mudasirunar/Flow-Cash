@@ -28,6 +28,7 @@ class UserPreferences(private val context: Context) {
         private val KEY_WEEKLY_SUMMARY = booleanPreferencesKey("weekly_summary_enabled")
         private val KEY_SAVED_EMAIL = stringPreferencesKey("saved_email")
         private val KEY_REMEMBER_ME = booleanPreferencesKey("remember_me")
+        private val KEY_DATA_VISIBLE = booleanPreferencesKey("is_data_visible")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
@@ -49,6 +50,10 @@ class UserPreferences(private val context: Context) {
 
     val biometricsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_BIOMETRICS_ENABLED] ?: false
+    }
+
+    val isDataVisibleFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_DATA_VISIBLE] ?: true
     }
 
     val selectedAccountIdFlow: Flow<String> = context.dataStore.data.map { preferences ->
@@ -89,6 +94,15 @@ class UserPreferences(private val context: Context) {
     suspend fun setBiometricsEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[KEY_BIOMETRICS_ENABLED] = enabled
+            if (!enabled) {
+                preferences[KEY_DATA_VISIBLE] = true
+            }
+        }
+    }
+
+    suspend fun setDataVisible(visible: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_DATA_VISIBLE] = visible
         }
     }
 
@@ -118,6 +132,12 @@ class UserPreferences(private val context: Context) {
             } else {
                 preferences[KEY_SAVED_EMAIL] = ""
             }
+        }
+    }
+
+    suspend fun clearUserPreferences() {
+        context.dataStore.edit { preferences ->
+            preferences.clear()
         }
     }
 }
