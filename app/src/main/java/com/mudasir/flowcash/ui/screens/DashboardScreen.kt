@@ -222,8 +222,8 @@ fun DashboardScreen(
                         )
 
                         // Two-way sync: Pager -> ViewModel selection
-                        LaunchedEffect(pagerState.currentPage, listSize, accounts) {
-                            if (listSize > 0) {
+                        LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress, listSize, accounts) {
+                            if (listSize > 0 && !pagerState.isScrollInProgress) {
                                 val currentMappedIndex = pagerState.currentPage % listSize
                                 val currentSelectedAccount = pagerList[currentMappedIndex]
                                 if (currentSelectedAccount is AccountEntity?) {
@@ -243,7 +243,10 @@ fun DashboardScreen(
                                 if (targetIndex >= 0) {
                                     val currentMappedIndex = pagerState.currentPage % listSize
                                     if (currentMappedIndex != targetIndex) {
-                                        val offset = targetIndex - currentMappedIndex
+                                        val diff1 = targetIndex - currentMappedIndex
+                                        val diff2 = diff1 + listSize
+                                        val diff3 = diff1 - listSize
+                                        val offset = listOf(diff1, diff2, diff3).minByOrNull { kotlin.math.abs(it) } ?: diff1
                                         if (isFirstPageSync) {
                                             pagerState.scrollToPage(pagerState.currentPage + offset)
                                         } else {
@@ -494,8 +497,8 @@ fun DashboardScreen(
                     )
 
                     // Two-way sync: Pager -> ViewModel selection
-                    LaunchedEffect(pagerState.currentPage, listSize, accounts) {
-                        if (listSize > 0) {
+                    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress, listSize, accounts) {
+                        if (listSize > 0 && !pagerState.isScrollInProgress) {
                             val currentMappedIndex = pagerState.currentPage % listSize
                             val currentSelectedAccount = pagerList[currentMappedIndex]
                             if (currentSelectedAccount is AccountEntity?) {
@@ -515,7 +518,10 @@ fun DashboardScreen(
                             if (targetIndex >= 0) {
                                 val currentMappedIndex = pagerState.currentPage % listSize
                                 if (currentMappedIndex != targetIndex) {
-                                    val offset = targetIndex - currentMappedIndex
+                                    val diff1 = targetIndex - currentMappedIndex
+                                    val diff2 = diff1 + listSize
+                                    val diff3 = diff1 - listSize
+                                    val offset = listOf(diff1, diff2, diff3).minByOrNull { kotlin.math.abs(it) } ?: diff1
                                     if (isFirstPageSync) {
                                         pagerState.scrollToPage(pagerState.currentPage + offset)
                                     } else {
