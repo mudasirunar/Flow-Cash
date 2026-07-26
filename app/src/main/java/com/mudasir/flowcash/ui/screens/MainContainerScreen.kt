@@ -151,6 +151,13 @@ fun MainContainerScreen(
     val userName = authState.user?.name ?: "Mudasir"
     val userEmail = authState.user?.email ?: "mudasir@flowcash.io"
 
+    // Back handling to return to Dashboard (main screen) from other tabs before exiting
+    if (selectedIndex != 0 && !showAddAccountScreen) {
+        BackHandler {
+            selectedIndex = 0
+        }
+    }
+
     // Back handling when AddAccountScreen overlay is active
     if (showAddAccountScreen) {
         BackHandler {
