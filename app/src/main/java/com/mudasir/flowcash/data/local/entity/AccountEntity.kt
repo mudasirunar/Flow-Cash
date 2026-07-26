@@ -14,5 +14,9 @@ data class AccountEntity(
     val cardNumber: String = "",
     val expiryDate: String = "",
     val cardColorStart: String = "#1E1B4B", // Gradient start hex
-    val cardColorEnd: String = "#4F46E5" // Gradient end hex
+    val cardColorEnd: String = "#4F46E5", // Gradient end hex
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isSynced: Boolean = false,
+    val isDeleted: Boolean = false
 )

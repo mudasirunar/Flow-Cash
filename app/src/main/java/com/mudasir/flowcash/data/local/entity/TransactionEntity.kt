@@ -22,7 +22,9 @@ data class TransactionEntity(
     // Metadata fields prepared for upcoming Firebase Sync
     val isSynced: Boolean = false,
     val isDeleted: Boolean = false,
-    val lastUpdatedServerTimestamp: Long = 0L
+    val lastUpdatedServerTimestamp: Long = 0L,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis()
 ) {
     fun toDomainModel(): TransactionItem {
         val txType = try {
@@ -46,7 +48,9 @@ data class TransactionEntity(
             category = catType,
             dateFormatted = dateFormatted,
             timestamp = timestamp,
-            accountName = accountName
+            accountName = accountName,
+            createdAt = createdAt,
+            updatedAt = updatedAt
         )
     }
 
@@ -69,7 +73,9 @@ data class TransactionEntity(
                 timestamp = item.timestamp,
                 isSynced = isSynced,
                 isDeleted = false,
-                lastUpdatedServerTimestamp = 0L
+                lastUpdatedServerTimestamp = 0L,
+                createdAt = item.createdAt,
+                updatedAt = item.updatedAt
             )
         }
     }

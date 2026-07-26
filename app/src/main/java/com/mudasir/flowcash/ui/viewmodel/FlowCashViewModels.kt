@@ -193,12 +193,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         type: TransactionType,
         category: CategoryType,
         accountName: String = "Main Wallet",
-        note: String? = null
+        note: String? = null,
+        subtitle: String = "Manual entry"
     ) {
         viewModelScope.launch {
             repository.addTransaction(
                 title = title,
-                subtitle = "Manual entry",
+                subtitle = subtitle,
                 amount = amount,
                 type = type,
                 category = category,

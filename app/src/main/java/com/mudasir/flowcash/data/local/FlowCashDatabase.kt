@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 
 @Database(
     entities = [TransactionEntity::class, BudgetEntity::class, AccountEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class FlowCashDatabase : RoomDatabase() {

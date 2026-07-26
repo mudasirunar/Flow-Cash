@@ -37,6 +37,19 @@ import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -111,6 +124,8 @@ fun MainContainerScreen(
     val accountsState by dashboardViewModel.accounts.collectAsState()
     val accounts = remember(accountsState) { accountsState ?: emptyList() }
     var showAccountRequiredDialog by rememberSaveable { mutableStateOf(false) }
+    val selectedAccount by dashboardViewModel.selectedAccount.collectAsState()
+    var initialTransactionType by remember { mutableStateOf(TransactionType.INCOME) }
 
     val accountToEdit = remember(editingAccountId, accounts) {
         accounts.find { it.id == editingAccountId }
@@ -198,10 +213,11 @@ fun MainContainerScreen(
                             dashboardViewModel = dashboardViewModel,
                             userName = userName,
                             currencySymbol = currency,
-                            onAddTransactionClick = {
+                            onAddTransactionClick = { filterType ->
                                 if (accounts.isEmpty()) {
                                     showAccountRequiredDialog = true
                                 } else {
+                                    initialTransactionType = filterType ?: TransactionType.INCOME
                                     showAddModal = true
                                 }
                             },
@@ -221,6 +237,7 @@ fun MainContainerScreen(
                                 if (accounts.isEmpty()) {
                                     showAccountRequiredDialog = true
                                 } else {
+                                    initialTransactionType = TransactionType.INCOME
                                     showAddModal = true
                                 }
                             }
@@ -290,16 +307,19 @@ fun MainContainerScreen(
             tonalElevation = 8.dp
         ) {
             AddTransactionSheetContent(
+                initialType = initialTransactionType,
+                initialAccountName = selectedAccount?.name,
                 currencySymbol = currency,
-                accountsList = accounts.map { it.name },
-                onAdd = { title, amt, type, category, accountName, note ->
+                accountsList = accounts,
+                onAdd = { title, amt, type, category, accountName, note, customCategory ->
                     dashboardViewModel.addTransaction(
                         title = title,
                         amount = amt,
                         type = type,
                         category = category,
                         accountName = accountName,
-                        note = note
+                        note = note,
+                        subtitle = if (category == CategoryType.OTHER && !customCategory.isNullOrBlank()) customCategory else "Manual entry"
                     )
                     showAddModal = false
                 }
@@ -308,19 +328,35 @@ fun MainContainerScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddTransactionSheetContent(
+    initialType: TransactionType = TransactionType.INCOME,
+    initialAccountName: String? = null,
     currencySymbol: String = "$",
-    accountsList: List<String> = listOf("Main Wallet"),
-    onAdd: (title: String, amount: Double, type: TransactionType, category: CategoryType, account: String, note: String?) -> Unit
+    accountsList: List<AccountEntity> = emptyList(),
+    onAdd: (title: String, amount: Double, type: TransactionType, category: CategoryType, account: String, note: String?, customCategory: String?) -> Unit
 ) {
-    var selectedType by rememberSaveable { mutableStateOf(TransactionType.EXPENSE) }
+    var selectedType by rememberSaveable(initialType) { mutableStateOf(initialType) }
     var title by rememberSaveable { mutableStateOf("") }
     var amountText by rememberSaveable { mutableStateOf("") }
-    var selectedCategory by rememberSaveable { mutableStateOf(CategoryType.FOOD) }
-    var selectedAccount by rememberSaveable { mutableStateOf(accountsList.firstOrNull() ?: "Main Wallet") }
+    var selectedCategory by rememberSaveable { mutableStateOf(CategoryType.SALARY) }
+    var customCategoryText by rememberSaveable { mutableStateOf("") }
+
+    val defaultAccount = remember(initialAccountName, accountsList) {
+        val matchedAccount = if (!initialAccountName.isNullOrBlank()) {
+            accountsList.find { it.name == initialAccountName }
+        } else {
+            null
+        }
+        matchedAccount?.name ?: accountsList.firstOrNull()?.name ?: "Main Wallet"
+    }
+    var selectedAccount by rememberSaveable(defaultAccount) { mutableStateOf(defaultAccount) }
     var noteText by rememberSaveable { mutableStateOf("") }
+    var dropdownExpanded by remember { mutableStateOf(false) }
+
+    val selectedAccountType = remember(selectedAccount, accountsList) {
+        accountsList.find { it.name == selectedAccount }?.accountType ?: "CASH_WALLET"
+    }
 
     Column(
         modifier = Modifier
@@ -338,7 +374,7 @@ fun AddTransactionSheetContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 1. Transaction Type Segmented Toggle
+        // 1. Transaction Type Segmented Toggle (Income & Expense only)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -348,15 +384,14 @@ fun AddTransactionSheetContent(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             listOf(
-                TransactionType.EXPENSE to "Expense",
                 TransactionType.INCOME to "Income",
-                TransactionType.TRANSFER to "Transfer"
+                TransactionType.EXPENSE to "Expense"
             ).forEach { (type, label) ->
                 val isSelected = selectedType == type
                 val color = when (type) {
                     TransactionType.INCOME -> IncomeGreen
                     TransactionType.EXPENSE -> ExpenseRed
-                    TransactionType.TRANSFER -> PrimaryIndigo
+                    else -> MaterialTheme.colorScheme.primary
                 }
 
                 Box(
@@ -399,11 +434,11 @@ fun AddTransactionSheetContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 3. Title / Merchant Input
+        // 3. Description / Merchant Input
         OutlinedTextField(
             value = title,
             onValueChange = { title = it },
-            label = { Text("Title / Merchant Name") },
+            label = { Text("Description / Merchant") },
             placeholder = { Text("e.g. Starbucks, Salary, Amazon") },
             singleLine = true,
             shape = RoundedCornerShape(16.dp),
@@ -416,18 +451,18 @@ fun AddTransactionSheetContent(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 4. Category Grid Selector
+        // 4. Category Horizontal Row Selector
         Text(
             text = "Category",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        FlowRow(
+        LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(vertical = 4.dp)
         ) {
-            CategoryType.entries.forEach { category ->
+            items(CategoryType.entries.toTypedArray()) { category ->
                 val isSelected = selectedCategory == category
                 Box(
                     modifier = Modifier
@@ -436,14 +471,14 @@ fun AddTransactionSheetContent(
                             if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
                         .clickable { selectedCategory = category }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
                             imageVector = getCategoryIcon(category),
                             contentDescription = category.name,
                             tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
@@ -458,44 +493,104 @@ fun AddTransactionSheetContent(
             }
         }
 
+        // Custom Category text field shown if OTHER is selected
+        if (selectedCategory == CategoryType.OTHER) {
+            Spacer(modifier = Modifier.height(12.dp))
+            OutlinedTextField(
+                value = customCategoryText,
+                onValueChange = { customCategoryText = it },
+                label = { Text("Custom Category Name") },
+                placeholder = { Text("e.g. Gift, Tax, Dividends") },
+                singleLine = true,
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         Spacer(modifier = Modifier.height(20.dp))
 
-        // 5. Account Selector
+        // 5. Account Dropdown Selector
         Text(
-            text = "Account",
+            text = "Account / Wallet",
             style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            accountsList.forEach { account ->
-                val isSelected = selectedAccount == account
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(
-                            1.dp,
-                            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                            RoundedCornerShape(12.dp)
-                        )
-                        .background(
-                            if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else Color.Transparent
-                        )
-                        .clickable { selectedAccount = account }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f))
+                .clickable { dropdownExpanded = true }
+                .padding(horizontal = 16.dp, vertical = 14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = getLocalAccountTypeIcon(selectedAccountType),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = account,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                        text = selectedAccount,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            DropdownMenu(
+                expanded = dropdownExpanded,
+                onDismissRequest = { dropdownExpanded = false },
+                modifier = Modifier
+                    .fillMaxWidth(0.85f)
+                    .background(MaterialTheme.colorScheme.surface)
+            ) {
+                accountsList.forEach { account ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = account.name,
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = if (account.name == selectedAccount) FontWeight.Bold else FontWeight.Normal
+                                )
+                            )
+                        },
+                        onClick = {
+                            selectedAccount = account.name
+                            dropdownExpanded = false
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = getLocalAccountTypeIcon(account.accountType),
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         // 6. Note Input
         OutlinedTextField(
@@ -518,7 +613,15 @@ fun AddTransactionSheetContent(
             onClick = {
                 val amt = amountText.toDoubleOrNull() ?: 0.0
                 if (title.isNotBlank() && amt > 0.0) {
-                    onAdd(title, amt, selectedType, selectedCategory, selectedAccount, noteText.ifBlank { null })
+                    onAdd(
+                        title,
+                        amt,
+                        selectedType,
+                        selectedCategory,
+                        selectedAccount,
+                        noteText.ifBlank { null },
+                        if (selectedCategory == CategoryType.OTHER) customCategoryText.ifBlank { null } else null
+                    )
                 }
             },
             modifier = Modifier
@@ -539,5 +642,17 @@ fun AddTransactionSheetContent(
         }
 
         Spacer(modifier = Modifier.height(32.dp))
+    }
+}
+
+private fun getLocalAccountTypeIcon(type: String): ImageVector {
+    return when (type) {
+        "CARD" -> Icons.Default.CreditCard
+        "CASH_WALLET" -> Icons.Default.Wallet
+        "BANK_ACCOUNT" -> Icons.Default.AccountBalance
+        "INVESTMENT" -> Icons.AutoMirrored.Filled.ShowChart
+        "FREELANCE_INCOME" -> Icons.Default.Work
+        "SAVINGS" -> Icons.Default.Savings
+        else -> Icons.Default.AccountBalanceWallet
     }
 }

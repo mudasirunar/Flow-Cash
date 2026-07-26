@@ -29,7 +29,9 @@ data class TransactionItem(
     val category: CategoryType,
     val dateFormatted: String,
     val timestamp: Long,
-    val accountName: String = "Main Wallet"
+    val accountName: String = "Main Wallet",
+    val createdAt: Long = timestamp,
+    val updatedAt: Long = timestamp
 )
 
 @Immutable

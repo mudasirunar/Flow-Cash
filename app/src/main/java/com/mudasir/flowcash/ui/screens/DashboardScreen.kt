@@ -38,6 +38,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -109,13 +110,21 @@ fun DashboardScreen(
     dashboardViewModel: DashboardViewModel,
     userName: String = "Mudasir",
     currencySymbol: String = "$",
-    onAddTransactionClick: () -> Unit,
+    onAddTransactionClick: (TransactionType?) -> Unit,
     onAddAccountClick: () -> Unit = {},
     onEditAccountClick: (AccountEntity) -> Unit = {}
 ) {
     val allTransactions by dashboardViewModel.transactions.collectAsState()
     val transactions by dashboardViewModel.filteredTransactions.collectAsState()
     val selectedFilter by dashboardViewModel.selectedFilter.collectAsState()
+
+    var timeTicker by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000)
+            timeTicker++
+        }
+    }
     val selectedAccount by dashboardViewModel.selectedAccount.collectAsState()
     val accountsState by dashboardViewModel.accounts.collectAsState()
     val accounts = remember(accountsState) { accountsState ?: emptyList() }
@@ -326,30 +335,59 @@ fun DashboardScreen(
                     .weight(1f)
                     .fillMaxHeight()
             ) {
-                // Filter Chips
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == null,
-                            onClick = { dashboardViewModel.setFilter(null) },
-                            label = { Text("All", fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)
-                        )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        item {
+                            FilterChip(
+                                selected = selectedFilter == null,
+                                onClick = { dashboardViewModel.setFilter(null) },
+                                label = { Text("All", fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = selectedFilter == TransactionType.INCOME,
+                                onClick = { dashboardViewModel.setFilter(TransactionType.INCOME) },
+                                label = { Text("Income", fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen, selectedLabelColor = Color.White)
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = selectedFilter == TransactionType.EXPENSE,
+                                onClick = { dashboardViewModel.setFilter(TransactionType.EXPENSE) },
+                                label = { Text("Expenses", fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed, selectedLabelColor = Color.White)
+                            )
+                        }
                     }
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == TransactionType.INCOME,
-                            onClick = { dashboardViewModel.setFilter(TransactionType.INCOME) },
-                            label = { Text("Income", fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen, selectedLabelColor = Color.White)
-                        )
-                    }
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == TransactionType.EXPENSE,
-                            onClick = { dashboardViewModel.setFilter(TransactionType.EXPENSE) },
-                            label = { Text("Expenses", fontSize = 11.sp) },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed, selectedLabelColor = Color.White)
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .height(32.dp)
+                            .width(44.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+                            .clickable { onAddTransactionClick(selectedFilter) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Transaction",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -369,17 +407,25 @@ fun DashboardScreen(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 if (transactions.isEmpty()) {
+                    val emptyTitle = if (selectedAccount == null) "No Activity Registered Yet" else "No Activity for ${selectedAccount?.name}"
+                    val emptyDesc = if (selectedAccount == null) {
+                        "You haven't recorded any transactions across any accounts. Tap below to start tracking!"
+                    } else {
+                        "There are no transactions recorded for this wallet. Tap below to add one!"
+                    }
                     Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("No Activity Yet", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 16.dp)) {
+                            Text(emptyTitle, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.height(4.dp))
-                            Button(onClick = onAddTransactionClick, shape = RoundedCornerShape(10.dp)) { Text("Add Transaction", fontSize = 12.sp) }
+                            Text(emptyDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Button(onClick = { onAddTransactionClick(selectedFilter) }, shape = RoundedCornerShape(10.dp)) { Text("Add Transaction", fontSize = 12.sp) }
                         }
                     }
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(items = transactions, key = { it.id }) { tx ->
-                            TransactionRowItem(transaction = tx, currencySymbol = currencySymbol)
+                            TransactionRowItem(transaction = tx, currencySymbol = currencySymbol, timeTicker = timeTicker)
                         }
                     }
                 }
@@ -551,30 +597,59 @@ fun DashboardScreen(
             }
 
             item {
-                // Filter Chips
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == null,
-                            onClick = { dashboardViewModel.setFilter(null) },
-                            label = { Text("All") },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)
-                        )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        item {
+                            FilterChip(
+                                selected = selectedFilter == null,
+                                onClick = { dashboardViewModel.setFilter(null) },
+                                label = { Text("All") },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = selectedFilter == TransactionType.INCOME,
+                                onClick = { dashboardViewModel.setFilter(TransactionType.INCOME) },
+                                label = { Text("Income") },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen, selectedLabelColor = Color.White)
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = selectedFilter == TransactionType.EXPENSE,
+                                onClick = { dashboardViewModel.setFilter(TransactionType.EXPENSE) },
+                                label = { Text("Expenses") },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed, selectedLabelColor = Color.White)
+                            )
+                        }
                     }
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == TransactionType.INCOME,
-                            onClick = { dashboardViewModel.setFilter(TransactionType.INCOME) },
-                            label = { Text("Income") },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen, selectedLabelColor = Color.White)
-                        )
-                    }
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == TransactionType.EXPENSE,
-                            onClick = { dashboardViewModel.setFilter(TransactionType.EXPENSE) },
-                            label = { Text("Expenses") },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed, selectedLabelColor = Color.White)
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .height(32.dp)
+                            .width(44.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+                            .clickable { onAddTransactionClick(selectedFilter) },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Transaction",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -598,19 +673,25 @@ fun DashboardScreen(
 
             if (transactions.isEmpty()) {
                 item {
+                    val emptyTitle = if (selectedAccount == null) "No Activity Registered Yet" else "No Activity for ${selectedAccount?.name}"
+                    val emptyDesc = if (selectedAccount == null) {
+                        "You haven't recorded any transactions across any of your accounts yet. Tap below to start tracking your cash flow!"
+                    } else {
+                        "There are no transactions recorded for this wallet. Tap below to add a transaction to this specific account!"
+                    }
                     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text("No Activity Registered Yet", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp)) {
+                            Text(emptyTitle, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
                             Spacer(modifier = Modifier.height(6.dp))
-                            Text("Start by recording your first transaction.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(emptyDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                             Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = onAddTransactionClick, shape = RoundedCornerShape(12.dp)) { Text("Record First Transaction") }
+                            Button(onClick = { onAddTransactionClick(selectedFilter) }, shape = RoundedCornerShape(12.dp)) { Text("Record First Transaction") }
                         }
                     }
                 }
             } else {
                 items(items = transactions, key = { it.id }) { tx ->
-                    TransactionRowItem(transaction = tx, currencySymbol = currencySymbol)
+                    TransactionRowItem(transaction = tx, currencySymbol = currencySymbol, timeTicker = timeTicker)
                     Spacer(modifier = Modifier.height(10.dp))
                 }
             }
@@ -1182,12 +1263,13 @@ private fun CardEyeButton(
 
 fun getAccountTypeIcon(type: String): ImageVector {
     return when (type) {
+        "CARD" -> Icons.Default.CreditCard
         "CASH_WALLET" -> Icons.Default.Wallet
         "BANK_ACCOUNT" -> Icons.Default.AccountBalance
         "INVESTMENT" -> Icons.AutoMirrored.Filled.ShowChart
         "FREELANCE_INCOME" -> Icons.Default.Work
         "SAVINGS" -> Icons.Default.Savings
-        else -> Icons.Default.MoreHoriz
+        else -> Icons.Default.AccountBalanceWallet
     }
 }
 
@@ -1242,8 +1324,11 @@ private fun IncomeExpenseMetricsRow(totalIncome: Double, totalExpense: Double, c
 }
 
 @Composable
-fun TransactionRowItem(transaction: TransactionItem, currencySymbol: String) {
+fun TransactionRowItem(transaction: TransactionItem, currencySymbol: String, timeTicker: Int = 0) {
     val isIncome = transaction.type == TransactionType.INCOME
+    val relativeTime = remember(transaction.timestamp, timeTicker) {
+        formatRelativeTime(transaction.timestamp)
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -1259,8 +1344,13 @@ fun TransactionRowItem(transaction: TransactionItem, currencySymbol: String) {
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
+                    val categoryText = if (transaction.category == CategoryType.OTHER && transaction.subtitle.isNotBlank() && transaction.subtitle != "Manual entry") {
+                        transaction.subtitle
+                    } else {
+                        transaction.category.name.lowercase().replaceFirstChar { it.uppercase() }
+                    }
                     Text(transaction.title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface))
-                    Text("${transaction.accountName} • ${transaction.dateFormatted}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("${transaction.accountName} • $categoryText • $relativeTime", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Text(
@@ -1548,6 +1638,46 @@ private fun SkeletonRowItem(shimmerBrush: Brush) {
                 }
             }
             Box(modifier = Modifier.size(60.dp, 16.dp).clip(RoundedCornerShape(4.dp)).background(shimmerBrush))
+        }
+    }
+}
+
+fun formatRelativeTime(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+
+    if (diff < 0) {
+        return "Just now"
+    }
+
+    val oneMinute = 60 * 1000L
+    val oneHour = 60 * oneMinute
+    val oneDay = 24 * oneHour
+
+    return when {
+        diff < oneMinute -> "Just now"
+        diff < oneHour -> {
+            val minutes = diff / oneMinute
+            "${minutes}m ago"
+        }
+        diff < oneDay -> {
+            val hours = diff / oneHour
+            "${hours}h ago"
+        }
+        diff < 2 * oneDay -> "Yesterday"
+        else -> {
+            val days = diff / oneDay
+            if (days < 7) {
+                "${days}d ago"
+            } else {
+                val weeks = days / 7
+                if (weeks < 4) {
+                    "${weeks}w ago"
+                } else {
+                    val sdf = java.text.SimpleDateFormat("MMM dd, yyyy", java.util.Locale.getDefault())
+                    sdf.format(java.util.Date(timestamp))
+                }
+            }
         }
     }
 }

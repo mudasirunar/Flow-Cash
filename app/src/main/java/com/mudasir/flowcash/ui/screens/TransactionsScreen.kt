@@ -33,6 +33,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,6 +48,14 @@ fun TransactionsScreen(
 ) {
     val transactions by dashboardViewModel.filteredTransactions.collectAsState()
     val searchQuery by dashboardViewModel.searchQuery.collectAsState()
+
+    var timeTicker by remember { mutableStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(60_000)
+            timeTicker++
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -141,7 +153,7 @@ fun TransactionsScreen(
                         items = transactions,
                         key = { tx -> tx.id }
                     ) { tx ->
-                        TransactionRowItem(transaction = tx, currencySymbol = currencySymbol)
+                        TransactionRowItem(transaction = tx, currencySymbol = currencySymbol, timeTicker = timeTicker)
                     }
                 }
             }

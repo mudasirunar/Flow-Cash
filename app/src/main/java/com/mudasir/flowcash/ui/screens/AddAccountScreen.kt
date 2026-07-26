@@ -369,7 +369,11 @@ fun AddAccountScreen(
                     cardNumber = if (isCardType) cardNumber else "",
                     expiryDate = if (isCardType) previewFormattedExpiry else "",
                     cardColorStart = currentTemplate.startHex,
-                    cardColorEnd = currentTemplate.endHex
+                    cardColorEnd = currentTemplate.endHex,
+                    createdAt = accountToEdit?.createdAt ?: System.currentTimeMillis(),
+                    updatedAt = System.currentTimeMillis(),
+                    isSynced = false,
+                    isDeleted = false
                 )
                 onSave(account)
             }

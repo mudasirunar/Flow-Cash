@@ -7,5 +7,9 @@ import androidx.room.PrimaryKey
 data class BudgetEntity(
     @PrimaryKey
     val categoryName: String,
-    val limitAmount: Double
+    val limitAmount: Double,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val isSynced: Boolean = false,
+    val isDeleted: Boolean = false
 )
