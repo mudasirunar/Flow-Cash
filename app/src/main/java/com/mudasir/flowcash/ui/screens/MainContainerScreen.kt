@@ -36,7 +36,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Edit
+import com.mudasir.flowcash.ui.components.FlowCashAlertDialog
+import com.mudasir.flowcash.ui.components.FlowCashConfirmDialog
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.CalendarToday
@@ -44,6 +48,8 @@ import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.lazy.LazyRow
@@ -349,66 +355,25 @@ fun MainContainerScreen(
     )
 
     if (biometricAlertMessage != null) {
-        androidx.compose.material3.AlertDialog(
+        FlowCashAlertDialog(
             onDismissRequest = { biometricAlertMessage = null },
-            title = {
-                Text(
-                    text = biometricAlertTitle ?: "Biometric Security",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = biometricAlertMessage ?: "",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = { biometricAlertMessage = null },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("OK", fontWeight = FontWeight.Bold)
-                }
-            }
+            title = biometricAlertTitle ?: "Biometric Security",
+            message = biometricAlertMessage ?: "",
+            icon = Icons.Default.Security
         )
     }
 
     if (showAccountRequiredDialog) {
-        androidx.compose.material3.AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = { showAccountRequiredDialog = false },
-            title = {
-                Text(
-                    text = "Account Required",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = "You need to create a card or wallet account before adding transactions.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showAccountRequiredDialog = false
-                        editingAccountId = null
-                        showAddAccountScreen = true
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Create Account", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { showAccountRequiredDialog = false },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Cancel")
-                }
+            title = "Account Required",
+            message = "You need to create a card or wallet account before adding transactions.",
+            icon = Icons.Default.CreditCard,
+            confirmButtonText = "Create",
+            onConfirm = {
+                showAccountRequiredDialog = false
+                editingAccountId = null
+                showAddAccountScreen = true
             }
         )
     }
@@ -449,17 +414,27 @@ fun MainContainerScreen(
         val exactTime = remember(detailsTx.timestamp) { sdf.format(java.util.Date(detailsTx.timestamp)) }
         val relativeTime = remember(detailsTx.timestamp) { formatRelativeTime(detailsTx.timestamp) }
 
-        AlertDialog(
+        androidx.compose.ui.window.Dialog(
             onDismissRequest = { selectedTransactionForDetails = null },
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
-            modifier = Modifier.fillMaxWidth(0.92f),
-            shape = RoundedCornerShape(28.dp),
-            containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp,
-            title = null,
-            text = {
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth(0.92f)
+                    .clip(RoundedCornerShape(28.dp))
+                    .border(
+                        1.5.dp,
+                        (if (isIncome) IncomeGreen else ExpenseRed).copy(alpha = 0.45f),
+                        RoundedCornerShape(28.dp)
+                    ),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                shape = RoundedCornerShape(28.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+            ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
@@ -557,8 +532,8 @@ fun MainContainerScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                                .padding(16.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                .padding(14.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.AutoMirrored.Filled.Notes, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
@@ -569,20 +544,25 @@ fun MainContainerScreen(
                             Text(detailsTx.note, style = MaterialTheme.typography.bodySmall.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic), color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
-                }
-            },
-            confirmButton = {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
                     Button(
                         onClick = { selectedTransactionForDetails = null },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth(0.6f)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isIncome) IncomeGreen else ExpenseRed,
+                            contentColor = Color.White
+                        )
                     ) {
-                        Text("Close Details")
+                        Text("Close", fontWeight = FontWeight.Bold)
                     }
                 }
             }
-        )
+        }
     }
 
     val menuTx = selectedTransactionForMenu
@@ -665,34 +645,16 @@ fun MainContainerScreen(
 
     val deleteTx = transactionToDelete
     if (deleteTx != null) {
-        AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = { transactionToDelete = null },
-            shape = RoundedCornerShape(20.dp),
-            title = {
-                Text("Delete Transaction?", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-            },
-            text = {
-                Text("Are you sure you want to permanently delete this transaction? This action will adjust the balance of your account.")
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        dashboardViewModel.deleteTransaction(deleteTx.id)
-                        transactionToDelete = null
-                    },
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
-                ) {
-                    Text("Delete", color = Color.White)
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { transactionToDelete = null },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Cancel")
-                }
+            title = "Delete Transaction?",
+            message = "Are you sure you want to permanently delete this transaction? This action will adjust the balance of your account.",
+            icon = Icons.Default.DeleteForever,
+            isDestructive = true,
+            confirmButtonText = "Delete",
+            onConfirm = {
+                dashboardViewModel.deleteTransaction(deleteTx.id)
+                transactionToDelete = null
             }
         )
     }

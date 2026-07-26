@@ -34,6 +34,9 @@ import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.Contactless
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Warning
+import com.mudasir.flowcash.ui.components.FlowCashConfirmDialog
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Wallet
@@ -208,83 +211,31 @@ fun AddAccountScreen(
     }
 
     if (showDiscardDialog) {
-        androidx.compose.material3.AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = { showDiscardDialog = false },
-            title = {
-                Text(
-                    text = "Discard Changes?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = "You have unsaved changes. Are you sure you want to discard them?",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDiscardDialog = false
-                        onBack()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ExpenseRed,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Discard", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { showDiscardDialog = false },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Cancel")
-                }
+            title = "Discard Changes?",
+            message = "You have unsaved changes. Are you sure you want to discard them?",
+            icon = Icons.Default.Warning,
+            isDestructive = true,
+            confirmButtonText = "Discard",
+            onConfirm = {
+                showDiscardDialog = false
+                onBack()
             }
         )
     }
 
     if (showDeleteDialog) {
-        androidx.compose.material3.AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = {
-                Text(
-                    text = "Delete Account?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = "Are you sure you want to delete \"${accountToEdit?.name}\"? All related income and expense transactions will be permanently deleted from history.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteDialog = false
-                        accountToEdit?.let { onDelete?.invoke(it) }
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ExpenseRed,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Delete", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { showDeleteDialog = false },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Cancel")
-                }
+            title = "Delete Account?",
+            message = "Are you sure you want to delete \"${accountToEdit?.name}\"? All related income and expense transactions will be permanently deleted from history.",
+            icon = Icons.Default.DeleteForever,
+            isDestructive = true,
+            confirmButtonText = "Delete",
+            onConfirm = {
+                showDeleteDialog = false
+                accountToEdit?.let { onDelete?.invoke(it) }
             }
         )
     }

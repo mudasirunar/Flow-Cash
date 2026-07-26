@@ -54,7 +54,12 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Contactless
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Edit
+import com.mudasir.flowcash.ui.components.FlowCashAlertDialog
+import com.mudasir.flowcash.ui.components.FlowCashConfirmDialog
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Notifications
@@ -872,44 +877,18 @@ fun DashboardScreen(
 
 // === Delete Confirmation Dialog ===
     if (accountToDelete != null) {
-        androidx.compose.material3.AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = { deletingAccountId = null },
-            title = {
-                Text(
-                    text = "Delete Account?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = "Are you sure you want to delete \"${accountToDelete?.name}\"? All related income and expense transactions will be permanently deleted from history.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        accountToDelete?.let { acc ->
-                            dashboardViewModel.deleteAccountAndTransactions(acc)
-                        }
-                        deletingAccountId = null
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = ExpenseRed,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Delete", fontWeight = FontWeight.Bold)
+            title = "Delete Account?",
+            message = "Are you sure you want to delete \"${accountToDelete?.name}\"? All related income and expense transactions will be permanently deleted from history.",
+            icon = Icons.Default.DeleteForever,
+            isDestructive = true,
+            confirmButtonText = "Delete",
+            onConfirm = {
+                accountToDelete?.let { acc ->
+                    dashboardViewModel.deleteAccountAndTransactions(acc)
                 }
-            },
-            dismissButton = {
-                androidx.compose.material3.OutlinedButton(
-                    onClick = { deletingAccountId = null },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Cancel")
-                }
+                deletingAccountId = null
             }
         )
     }
@@ -917,79 +896,39 @@ fun DashboardScreen(
     if (showBiometricSetupDialog) {
         val targetVisibility = !isDataVisible
         val actionText = if (targetVisibility) "unhide" else "hide"
-        AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = { showBiometricSetupDialog = false },
-            title = {
-                Text(
-                    text = "Biometric Setup Required 🔒",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = "To $actionText sensitive financial numbers and balance details, please configure Biometric Protection. This activates fingerprint protection for your account.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showBiometricSetupDialog = false
-                        BiometricAuthHelper.promptBiometricAuth(
-                            context = context,
-                            title = "Configure Biometric Security",
-                            subtitle = "Scan fingerprint to activate security and $actionText balances",
-                            onSuccess = {
-                                settingsViewModel.setBiometricsEnabled(true)
-                                dashboardViewModel.setDataVisible(targetVisibility)
-                                biometricAlertTitle = "Biometric Lock Activated! 🔒"
-                                biometricAlertMessage = "Your fingerprint is configured and Biometric Protection is turned ON in Settings."
-                            },
-                            onError = { err ->
-                                biometricAlertTitle = "Biometric Setup Failed"
-                                biometricAlertMessage = err
-                            }
-                        )
+            title = "Biometric Security Required",
+            message = "To $actionText sensitive financial numbers and balance details, please configure Biometric Protection. This activates fingerprint protection for your account.",
+            icon = Icons.Default.Fingerprint,
+            confirmButtonText = "Scan & Protect",
+            onConfirm = {
+                showBiometricSetupDialog = false
+                BiometricAuthHelper.promptBiometricAuth(
+                    context = context,
+                    title = "Configure Biometric Security",
+                    subtitle = "Scan fingerprint to activate security and $actionText balances",
+                    onSuccess = {
+                        settingsViewModel.setBiometricsEnabled(true)
+                        dashboardViewModel.setDataVisible(targetVisibility)
+                        biometricAlertTitle = "Biometric Protection Activated"
+                        biometricAlertMessage = "Your fingerprint is configured and Biometric Protection is turned ON in Settings."
                     },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Scan Fingerprint & Protect", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showBiometricSetupDialog = false },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Cancel")
-                }
+                    onError = { err ->
+                        biometricAlertTitle = "Biometric Setup Failed"
+                        biometricAlertMessage = err
+                    }
+                )
             }
         )
     }
 
     if (biometricAlertMessage != null) {
-        AlertDialog(
+        FlowCashAlertDialog(
             onDismissRequest = { biometricAlertMessage = null },
-            title = {
-                Text(
-                    text = biometricAlertTitle ?: "Biometric Security",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = biometricAlertMessage ?: "",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = { biometricAlertMessage = null },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("OK", fontWeight = FontWeight.Bold)
-                }
-            }
+            title = biometricAlertTitle ?: "Biometric Security",
+            message = biometricAlertMessage ?: "",
+            icon = Icons.Default.Security
         )
     }
 }

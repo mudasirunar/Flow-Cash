@@ -34,6 +34,11 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Security
+import com.mudasir.flowcash.ui.components.CurrencyOptionItem
+import com.mudasir.flowcash.ui.components.FlowCashAlertDialog
+import com.mudasir.flowcash.ui.components.FlowCashConfirmDialog
+import com.mudasir.flowcash.ui.components.FlowCashSelectionDialog
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.SettingsSuggest
@@ -663,231 +668,106 @@ fun SettingsScreen(
     }
 
     if (showBiometricEnableDialog) {
-        AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = { showBiometricEnableDialog = false },
-            title = {
-                Text(
-                    text = "Enable Biometric Protection",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = "Scan your fingerprint or Face ID to activate Biometric Protection for your financial balances.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showBiometricEnableDialog = false
-                        BiometricAuthHelper.promptBiometricAuth(
-                            context = context,
-                            title = "Configure Biometric Lock",
-                            subtitle = "Scan fingerprint to activate biometric security",
-                            onSuccess = {
-                                settingsViewModel.setBiometricsEnabled(true)
-                                biometricFeedbackTitle = "Biometric Lock Activated! 🔒"
-                                biometricFeedbackMessage = "Your fingerprint is now configured. You can safely hide and unhide your sensitive balances on your dashboard."
-                            },
-                            onError = { err ->
-                                biometricFeedbackTitle = "Biometric Setup Failed"
-                                biometricFeedbackMessage = err
-                            }
-                        )
+            title = "Enable Biometric Protection",
+            message = "Scan your fingerprint or Face ID to activate Biometric Protection for your financial balances.",
+            icon = Icons.Default.Fingerprint,
+            confirmButtonText = "Scan Fingerprint",
+            onConfirm = {
+                showBiometricEnableDialog = false
+                BiometricAuthHelper.promptBiometricAuth(
+                    context = context,
+                    title = "Configure Biometric Lock",
+                    subtitle = "Scan fingerprint to activate biometric security",
+                    onSuccess = {
+                        settingsViewModel.setBiometricsEnabled(true)
+                        biometricFeedbackTitle = "Biometric Lock Activated"
+                        biometricFeedbackMessage = "Your fingerprint is now configured. You can safely hide and unhide your sensitive balances on your dashboard."
                     },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Scan Fingerprint", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showBiometricEnableDialog = false },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Cancel")
-                }
+                    onError = { err ->
+                        biometricFeedbackTitle = "Biometric Setup Failed"
+                        biometricFeedbackMessage = err
+                    }
+                )
             }
         )
     }
 
     if (showBiometricDisableDialog) {
-        AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = { showBiometricDisableDialog = false },
-            title = {
-                Text(
-                    text = "Disable Biometric Lock",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = "Scan your fingerprint or Face ID to confirm disabling Biometric Protection.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showBiometricDisableDialog = false
-                        BiometricAuthHelper.promptBiometricAuth(
-                            context = context,
-                            title = "Disable Biometric Lock",
-                            subtitle = "Scan fingerprint to confirm disabling security",
-                            onSuccess = {
-                                settingsViewModel.setBiometricsEnabled(false)
-                                biometricFeedbackTitle = "Biometric Protection Disabled"
-                                biometricFeedbackMessage = "Biometric security is turned off. Balances can now be unhidden without fingerprint verification."
-                            },
-                            onError = { err ->
-                                biometricFeedbackTitle = "Verification Failed"
-                                biometricFeedbackMessage = err
-                            }
-                        )
+            title = "Disable Biometric Lock",
+            message = "Scan your fingerprint or Face ID to confirm disabling Biometric Protection.",
+            icon = Icons.Default.Security,
+            iconTint = ExpenseRed,
+            badgeBackground = ExpenseRed.copy(alpha = 0.12f),
+            showStrikeThrough = true,
+            confirmButtonText = "Confirm",
+            onConfirm = {
+                showBiometricDisableDialog = false
+                BiometricAuthHelper.promptBiometricAuth(
+                    context = context,
+                    title = "Disable Biometric Lock",
+                    subtitle = "Scan fingerprint to confirm disabling security",
+                    onSuccess = {
+                        settingsViewModel.setBiometricsEnabled(false)
+                        biometricFeedbackTitle = "Biometric Protection Disabled"
+                        biometricFeedbackMessage = "Biometric security is turned off. Balances can now be unhidden without fingerprint verification."
                     },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Confirm & Scan", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                OutlinedButton(
-                    onClick = { showBiometricDisableDialog = false },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Cancel")
-                }
+                    onError = { err ->
+                        biometricFeedbackTitle = "Verification Failed"
+                        biometricFeedbackMessage = err
+                    }
+                )
             }
         )
     }
 
     if (biometricFeedbackMessage != null) {
-        AlertDialog(
+        val isDisableFeedback = biometricFeedbackTitle == "Biometric Protection Disabled"
+        FlowCashAlertDialog(
             onDismissRequest = { biometricFeedbackMessage = null },
-            title = {
-                Text(
-                    text = biometricFeedbackTitle ?: "Biometric Security",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = biometricFeedbackMessage ?: "",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = { biometricFeedbackMessage = null },
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("OK", fontWeight = FontWeight.Bold)
-                }
-            }
+            title = biometricFeedbackTitle ?: "Biometric Security",
+            message = biometricFeedbackMessage ?: "",
+            icon = Icons.Default.Security,
+            iconTint = if (isDisableFeedback) ExpenseRed else PrimaryIndigo,
+            badgeBackground = (if (isDisableFeedback) ExpenseRed else PrimaryIndigo).copy(alpha = 0.12f),
+            showStrikeThrough = isDisableFeedback
         )
     }
 
     // Logout Confirmation Dialog
     if (showLogoutDialog) {
-        AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = { showLogoutDialog = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = null,
-                    tint = ExpenseRed,
-                    modifier = Modifier.size(32.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = "Log Out of FlowCash?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Text(
-                    text = "Are you sure you want to log out of your account? You will need to sign in again to access your cash flow dashboard.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showLogoutDialog = false
-                        authViewModel.logout()
-                        onLogoutClick()
-                    }
-                ) {
-                    Text("Log Out", color = ExpenseRed, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancel")
-                }
+            title = "Log Out of FlowCash?",
+            message = "Are you sure you want to log out of your account? You will need to sign in again to access your cash flow dashboard.",
+            icon = Icons.AutoMirrored.Filled.Logout,
+            isDestructive = true,
+            confirmButtonText = "Log Out",
+            onConfirm = {
+                showLogoutDialog = false
+                authViewModel.logout()
+                onLogoutClick()
             }
         )
     }
 
-    // Reset Data Confirmation Dialog with Loader
+    // Reset Data Confirmation Dialog
     if (showResetDialog) {
-        AlertDialog(
+        FlowCashConfirmDialog(
             onDismissRequest = {
                 if (!isResettingData) showResetDialog = false
             },
-            icon = {
-                Icon(Icons.Default.DeleteSweep, contentDescription = null, tint = ExpenseRed, modifier = Modifier.size(32.dp))
-            },
-            title = {
-                Text(
-                    text = "Reset All App Data?",
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-                )
-            },
-            text = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "This will permanently clear all your account balances, transaction records, and category settings from your device. This action cannot be undone.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (isResettingData) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        CircularProgressIndicator(
-                            color = ExpenseRed,
-                            modifier = Modifier.size(28.dp),
-                            strokeWidth = 3.dp
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Clearing local data...",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = !isResettingData,
-                    onClick = {
-                        settingsViewModel.clearLocalData {
-                            showResetDialog = false
-                        }
-                    }
-                ) {
-                    Text("Clear All Data", color = ExpenseRed, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    enabled = !isResettingData,
-                    onClick = { showResetDialog = false }
-                ) {
-                    Text("Cancel")
+            title = "Reset All App Data?",
+            message = "This will permanently clear all your account balances, transaction records, and category settings from your device. This action cannot be undone.",
+            icon = Icons.Default.DeleteSweep,
+            isDestructive = true,
+            confirmButtonText = if (isResettingData) "Clearing..." else "Clear All",
+            onConfirm = {
+                settingsViewModel.clearLocalData {
+                    showResetDialog = false
                 }
             }
         )
@@ -895,76 +775,21 @@ fun SettingsScreen(
 
     // Currency Selection Modal Dialog
     if (showCurrencyDialog) {
-        AlertDialog(
+        val currencyOptions = AvailableCurrencies.map { option ->
+            CurrencyOptionItem(
+                symbol = option.symbol,
+                code = option.code,
+                name = "${option.name} • ${option.country}"
+            )
+        }
+        FlowCashSelectionDialog(
             onDismissRequest = { showCurrencyDialog = false },
-            title = {
-                Text("Select Primary Currency", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
-            },
-            text = {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 340.dp)
-                        .verticalScroll(rememberScrollState())
-                ) {
-                    AvailableCurrencies.forEach { option ->
-                        val isSelected = currencyCode == option.code || (currencyCode == "USD" && option.code == "USD" && currency == "$")
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent)
-                                .clickable {
-                                    settingsViewModel.setCurrency(option.symbol, option.code)
-                                    showCurrencyDialog = false
-                                }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = option.symbol,
-                                        style = MaterialTheme.typography.titleSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
-                                        )
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column {
-                                    Text(
-                                        text = "${option.name} (${option.code})",
-                                        style = MaterialTheme.typography.bodyMedium.copy(
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
-                                        )
-                                    )
-                                    Text(
-                                        text = option.country,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-
-                            if (isSelected) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showCurrencyDialog = false }) {
-                    Text("Close")
-                }
+            title = "Select Primary Currency",
+            icon = Icons.Default.AttachMoney,
+            options = currencyOptions,
+            selectedCode = currencyCode,
+            onOptionSelected = { item ->
+                settingsViewModel.setCurrency(item.symbol, item.code)
             }
         )
     }

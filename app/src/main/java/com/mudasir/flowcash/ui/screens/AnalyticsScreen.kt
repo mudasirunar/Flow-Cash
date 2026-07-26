@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import com.mudasir.flowcash.ui.components.FlowCashInputDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -630,42 +631,21 @@ fun AnalyticsScreen(
 
     // Set Budget Limit Modal Dialog
     if (showBudgetDialog) {
-        AlertDialog(
+        FlowCashInputDialog(
             onDismissRequest = { showBudgetDialog = false },
-            title = { Text("Monthly Budget for $selectedCategoryForBudget") },
-            text = {
-                Column {
-                    Text(
-                        text = "Define a monthly spending limit for $selectedCategoryForBudget to receive live threshold alerts.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 12.dp)
-                    )
-                    OutlinedTextField(
-                        value = budgetInputValue,
-                        onValueChange = { budgetInputValue = it },
-                        label = { Text("Budget Limit ($currencySymbol)") },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val limit = budgetInputValue.toDoubleOrNull() ?: 0.0
-                        dashboardViewModel.updateBudget(selectedCategoryForBudget, limit)
-                        showBudgetDialog = false
-                    }
-                ) {
-                    Text("Save Limit", fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBudgetDialog = false }) {
-                    Text("Cancel")
-                }
+            title = "Set Monthly Budget",
+            subtitle = "Define a monthly spending limit for $selectedCategoryForBudget to receive live threshold alerts.",
+            icon = Icons.Default.AccountBalanceWallet,
+            inputValue = budgetInputValue,
+            onValueChange = { budgetInputValue = it },
+            placeholder = "Enter amount",
+            prefixText = currencySymbol,
+            keyboardType = KeyboardType.Number,
+            confirmButtonText = "Save Limit",
+            onConfirm = {
+                val limit = budgetInputValue.toDoubleOrNull() ?: 0.0
+                dashboardViewModel.updateBudget(selectedCategoryForBudget, limit)
+                showBudgetDialog = false
             }
         )
     }
