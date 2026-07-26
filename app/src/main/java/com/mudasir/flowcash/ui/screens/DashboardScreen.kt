@@ -62,6 +62,15 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.CardGiftcard
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.LocalPlay
+import androidx.compose.material.icons.filled.MedicalServices
+import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Flight
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Button
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.pager.HorizontalPager
@@ -1398,11 +1407,21 @@ fun getCategoryIcon(category: CategoryType): ImageVector {
     return when (category) {
         CategoryType.SALARY -> Icons.Default.Work
         CategoryType.FREELANCE -> Icons.Default.AttachMoney
-        CategoryType.INVESTMENT -> Icons.Default.ArrowUpward
+        CategoryType.INVESTMENT -> Icons.AutoMirrored.Filled.ShowChart
+        CategoryType.BUSINESS -> Icons.Default.Storefront
+        CategoryType.GIFTS -> Icons.Default.CardGiftcard
+        CategoryType.REFUNDS -> Icons.Default.Refresh
         CategoryType.FOOD -> Icons.Default.Fastfood
         CategoryType.SHOPPING -> Icons.Default.ShoppingBag
         CategoryType.BILLS -> Icons.Default.Receipt
-        else -> Icons.Default.Category
+        CategoryType.TRANSPORT -> Icons.Default.DirectionsCar
+        CategoryType.ENTERTAINMENT -> Icons.Default.LocalPlay
+        CategoryType.HEALTH -> Icons.Default.MedicalServices
+        CategoryType.EDUCATION -> Icons.Default.School
+        CategoryType.TRAVEL -> Icons.Default.Flight
+        CategoryType.RENT -> Icons.Default.Home
+        CategoryType.TAX -> Icons.Default.AccountBalance
+        CategoryType.OTHER -> Icons.Default.Category
     }
 }
 

@@ -3,11 +3,25 @@ package com.mudasir.flowcash.data.model
 import androidx.compose.runtime.Immutable
 
 enum class TransactionType {
-    INCOME, EXPENSE, TRANSFER
+    INCOME, EXPENSE
 }
 
 enum class CategoryType {
-    SALARY, INVESTMENT, FREELANCE, SHOPPING, FOOD, BILLS, TRANSPORT, ENTERTAINMENT, HEALTH, OTHER
+    // Income Categories
+    SALARY, INVESTMENT, FREELANCE, BUSINESS, GIFTS, REFUNDS,
+
+    // Expense Categories
+    SHOPPING, FOOD, BILLS, TRANSPORT, ENTERTAINMENT, HEALTH, EDUCATION, TRAVEL, RENT, TAX,
+
+    // Common / Other
+    OTHER;
+
+    fun isApplicableTo(transactionType: TransactionType): Boolean {
+        return when (transactionType) {
+            TransactionType.INCOME -> this in listOf(SALARY, INVESTMENT, FREELANCE, BUSINESS, GIFTS, REFUNDS, OTHER)
+            TransactionType.EXPENSE -> this in listOf(SHOPPING, FOOD, BILLS, TRANSPORT, ENTERTAINMENT, HEALTH, EDUCATION, TRAVEL, RENT, TAX, OTHER)
+        }
+    }
 }
 
 @Immutable

@@ -73,6 +73,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -650,6 +651,11 @@ fun AddTransactionSheetContent(
     var title by rememberSaveable(transactionToEdit) { mutableStateOf(transactionToEdit?.title ?: "") }
     var amountText by rememberSaveable(transactionToEdit) { mutableStateOf(transactionToEdit?.amount?.toString() ?: "") }
     var selectedCategory by rememberSaveable(transactionToEdit) { mutableStateOf(transactionToEdit?.category ?: CategoryType.SALARY) }
+    LaunchedEffect(selectedType) {
+        if (!selectedCategory.isApplicableTo(selectedType)) {
+            selectedCategory = if (selectedType == TransactionType.INCOME) CategoryType.SALARY else CategoryType.FOOD
+        }
+    }
     var customCategoryText by rememberSaveable(transactionToEdit) { mutableStateOf(if (transactionToEdit?.category == CategoryType.OTHER) transactionToEdit.subtitle else "") }
     var amountError by remember { mutableStateOf<String?>(null) }
     var titleError by remember { mutableStateOf<String?>(null) }
@@ -785,11 +791,15 @@ fun AddTransactionSheetContent(
         )
         Spacer(modifier = Modifier.height(8.dp))
 
+        val filteredCategories = remember(selectedType) {
+            CategoryType.entries.filter { it.isApplicableTo(selectedType) }
+        }
+
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(vertical = 4.dp)
         ) {
-            items(CategoryType.entries.toTypedArray()) { category ->
+            items(filteredCategories) { category ->
                 val isSelected = selectedCategory == category
                 Box(
                     modifier = Modifier
