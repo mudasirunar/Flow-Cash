@@ -91,6 +91,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val _selectedFilter = MutableStateFlow<TransactionType?>(null)
     private val _selectedAccount = MutableStateFlow<AccountEntity?>(null)
 
+    private val _isInitialSelectedAccountLoaded = MutableStateFlow(false)
+
     val accounts: StateFlow<List<AccountEntity>?> = repository.allAccounts
         .map<List<AccountEntity>, List<AccountEntity>?> { it }
         .stateIn(
@@ -99,13 +101,16 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             initialValue = null
         )
 
-    val isLoading: StateFlow<Boolean> = accounts
-        .map { it == null }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = true
-        )
+    val isLoading: StateFlow<Boolean> = combine(
+        accounts,
+        _isInitialSelectedAccountLoaded
+    ) { accs, loaded ->
+        accs == null || !loaded
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
+    )
 
     init {
         viewModelScope.launch {
@@ -115,6 +120,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
                 val matched = accountList.find { it.id == savedId }
                 _selectedAccount.value = matched
             }
+            _isInitialSelectedAccountLoaded.value = true
         }
     }
 

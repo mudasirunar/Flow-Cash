@@ -88,6 +88,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -221,6 +222,7 @@ fun DashboardScreen(
                         }
 
                         // Two-way sync: ViewModel selection -> Pager
+                        var isFirstPageSync by remember { mutableStateOf(true) }
                         LaunchedEffect(selectedAccount, listSize, accounts) {
                             if (listSize > 0) {
                                 val currentSelected = selectedAccount
@@ -229,16 +231,21 @@ fun DashboardScreen(
                                     val currentMappedIndex = pagerState.currentPage % listSize
                                     if (currentMappedIndex != targetIndex) {
                                         val offset = targetIndex - currentMappedIndex
-                                        pagerState.animateScrollToPage(pagerState.currentPage + offset)
+                                        if (isFirstPageSync) {
+                                            pagerState.scrollToPage(pagerState.currentPage + offset)
+                                        } else {
+                                            pagerState.animateScrollToPage(pagerState.currentPage + offset)
+                                        }
                                     }
+                                    isFirstPageSync = false
                                 }
                             }
                         }
 
                         HorizontalPager(
                             state = pagerState,
-                            contentPadding = PaddingValues(horizontal = 36.dp),
-                            pageSpacing = 12.dp,
+                            contentPadding = PaddingValues(horizontal = 48.dp),
+                            pageSpacing = 16.dp,
                             beyondViewportPageCount = 1,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -246,19 +253,23 @@ fun DashboardScreen(
                         ) { page ->
                             val mappedIndex = page % listSize
                             val item = pagerList[mappedIndex]
+                            val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
 
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .graphicsLayer {
-                                        val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).absoluteValue
-                                        val scale = 0.9f + (1f - 0.9f) * (1f - pageOffset.coerceIn(0f, 1f))
-                                        val alpha = 0.6f + (1f - 0.6f) * (1f - pageOffset.coerceIn(0f, 1f))
+                                        val pageOffsetAbs = pageOffset.absoluteValue
+                                        val scale = 0.86f + (1f - 0.86f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+                                        val alphaVal = 0.6f + (1f - 0.6f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
 
                                         scaleX = scale
                                         scaleY = scale
-                                        this.alpha = alpha
+                                        this.alpha = alphaVal
+                                        rotationY = -22f * pageOffset.coerceIn(-1f, 1f)
+                                        cameraDistance = 12f * density
                                     }
+                                    .zIndex(1f - pageOffset.absoluteValue)
                             ) {
                                 when (item) {
                                     null -> {
@@ -439,6 +450,7 @@ fun DashboardScreen(
                     }
 
                     // Two-way sync: ViewModel selection -> Pager
+                    var isFirstPageSync by remember { mutableStateOf(true) }
                     LaunchedEffect(selectedAccount, listSize, accounts) {
                         if (listSize > 0) {
                             val currentSelected = selectedAccount
@@ -447,8 +459,13 @@ fun DashboardScreen(
                                 val currentMappedIndex = pagerState.currentPage % listSize
                                 if (currentMappedIndex != targetIndex) {
                                     val offset = targetIndex - currentMappedIndex
-                                    pagerState.animateScrollToPage(pagerState.currentPage + offset)
+                                    if (isFirstPageSync) {
+                                        pagerState.scrollToPage(pagerState.currentPage + offset)
+                                    } else {
+                                        pagerState.animateScrollToPage(pagerState.currentPage + offset)
+                                    }
                                 }
+                                isFirstPageSync = false
                             }
                         }
                     }
@@ -464,19 +481,23 @@ fun DashboardScreen(
                     ) { page ->
                         val mappedIndex = page % listSize
                         val item = pagerList[mappedIndex]
+                        val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
 
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .graphicsLayer {
-                                    val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction).absoluteValue
-                                    val scale = 0.88f + (1f - 0.88f) * (1f - pageOffset.coerceIn(0f, 1f))
-                                    val alpha = 0.5f + (1f - 0.5f) * (1f - pageOffset.coerceIn(0f, 1f))
+                                    val pageOffsetAbs = pageOffset.absoluteValue
+                                    val scale = 0.86f + (1f - 0.86f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+                                    val alphaVal = 0.6f + (1f - 0.6f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
 
                                     scaleX = scale
                                     scaleY = scale
-                                    this.alpha = alpha
+                                    this.alpha = alphaVal
+                                    rotationY = -22f * pageOffset.coerceIn(-1f, 1f)
+                                    cameraDistance = 12f * density
                                 }
+                                .zIndex(1f - pageOffset.absoluteValue)
                         ) {
                             when (item) {
                                 null -> {
