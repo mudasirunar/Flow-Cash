@@ -97,6 +97,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -274,7 +275,7 @@ fun DashboardScreen(
                             beyondViewportPageCount = 1,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(185.dp)
+                                .height(205.dp)
                         ) { page ->
                             val mappedIndex = page % listSize
                             val item = pagerList[mappedIndex]
@@ -1117,15 +1118,25 @@ private fun SelectedAccountCard(
                 .align(Alignment.Center)
                 .widthIn(max = 360.dp)
                 .fillMaxWidth()
+                .shadow(
+                    elevation = 20.dp,
+                    shape = RoundedCornerShape(24.dp),
+                    ambientColor = endColor,
+                    spotColor = endColor
+                )
                 .clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(startColor, endColor)))
                 .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
                 .clickable { onEditClick() }
-                .padding(22.dp)
+                .padding(18.dp)
         ) {
             Column {
-                // Top Row: Account Name Pill + Card Eye Toggle & Network Logo
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                // Top Row: Account Name Pill (left) + Card Eye Toggle & Network Logo (right)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -1164,94 +1175,81 @@ private fun SelectedAccountCard(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Chip + Contactless (only for card types)
-                if (isCard) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp, 26.dp)
-                                .clip(RoundedCornerShape(5.dp))
-                                .background(Brush.linearGradient(listOf(Color(0xFFFCD34D), Color(0xFFF59E0B))))
-                                .border(0.5.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(5.dp))
-                        ) {
-                            Column(modifier = Modifier.fillMaxSize().padding(3.dp), verticalArrangement = Arrangement.SpaceEvenly) {
-                                repeat(3) {
-                                    Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD97706).copy(alpha = 0.4f)))
+                // Middle Row: Balance Display (left) + EMV Gold Chip & Contactless (right)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val displayAccountBalance = remember(isDataVisible, netBalance, currencySymbol) {
+                        if (isDataVisible) "$currencySymbol ${String.format("%,.2f", netBalance)}"
+                        else "$currencySymbol ••••••"
+                    }
+
+                    Text(
+                        text = displayAccountBalance,
+                        style = MaterialTheme.typography.headlineLarge.copy(
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isDataVisible) Color.White else Color.White.copy(alpha = 0.6f),
+                            fontSize = 25.sp
+                        )
+                    )
+
+                    if (isCard) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp, 22.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Brush.linearGradient(listOf(Color(0xFFFCD34D), Color(0xFFF59E0B))))
+                                    .border(0.5.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                            ) {
+                                Column(modifier = Modifier.fillMaxSize().padding(2.dp), verticalArrangement = Arrangement.SpaceEvenly) {
+                                    repeat(3) {
+                                        Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD97706).copy(alpha = 0.4f)))
+                                    }
                                 }
                             }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(Icons.Default.Contactless, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
                         }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Icon(Icons.Default.Contactless, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
                     }
-                    Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                // In SelectedAccountCard: Replace the balance Crossfade block with this:
-                val displayAccountBalance = remember(isDataVisible, netBalance, currencySymbol) {
-                    if (isDataVisible) "$currencySymbol ${String.format("%,.2f", netBalance)}"
-                    else "$currencySymbol ••••••"
-                }
+                Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = displayAccountBalance,
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.ExtraBold,
-                        color = if (isDataVisible) Color.White else Color.White.copy(alpha = 0.6f),
-                        fontSize = 28.sp
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Card Number or Type Banner
+                // Card Number + Expiry + Holder Name in a sleek compact row
                 if (isCard) {
-                    Crossfade(targetState = isDataVisible, animationSpec = tween(250), label = "CardNumberVisibility") { visible ->
+                    Crossfade(targetState = isDataVisible, animationSpec = tween(250), label = "CardDetailsVisibility") { visible ->
+                        val rawNumber = account.cardNumber.ifBlank { "0000000000000000" }
+                        val numberStr = if (visible) rawNumber.padEnd(16, '0').chunked(4).joinToString(" ") else "•••• •••• •••• ${rawNumber.takeLast(4)}"
+                        val expiryStr = if (visible) account.expiryDate.ifBlank { "MM/YY" } else "••/••"
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (visible) {
-                                val rawNumber = account.cardNumber.ifBlank { "0000000000000000" }
-                                val fullFormatted = rawNumber.padEnd(16, '0').chunked(4).joinToString("   ")
-
+                            Text(
+                                text = "$numberStr   •   $expiryStr",
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.8.sp,
+                                fontSize = 11.sp
+                            )
+                            if (account.holderName.isNotBlank()) {
                                 Text(
-                                    text = fullFormatted,
-                                    color = Color.White.copy(alpha = 0.9f),
+                                    text = account.holderName.uppercase(),
+                                    color = Color.White.copy(alpha = 0.6f),
                                     fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.5.sp,
-                                    fontSize = 13.sp
-                                )
-                                Text(
-                                    text = account.expiryDate.ifBlank { "MM/YY" },
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 12.sp
-                                )
-                            } else {
-                                val lastFour = account.cardNumber.takeLast(4).ifBlank { "0000" }
-                                val maskedFormatted = "••••   ••••   ••••   $lastFour"
-
-                                Text(
-                                    text = maskedFormatted,
-                                    color = Color.White.copy(alpha = 0.5f),
-                                    fontWeight = FontWeight.SemiBold,
-                                    letterSpacing = 2.sp,
-                                    fontSize = 13.sp
-                                )
-                                Text(
-                                    text = "••/••",
-                                    color = Color.White.copy(alpha = 0.35f),
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 12.sp
+                                    fontSize = 10.sp,
+                                    maxLines = 1
                                 )
                             }
                         }
                     }
-                }
-
-                // Holder Name
-                if (account.holderName.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                } else if (account.holderName.isNotBlank()) {
                     Crossfade(targetState = isDataVisible, animationSpec = tween(250), label = "HolderNameVisibility") { visible ->
                         if (visible) {
                             Text(account.holderName.uppercase(), color = Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp)
@@ -1259,10 +1257,10 @@ private fun SelectedAccountCard(
                             Text("•••••••", color = Color.White.copy(alpha = 0.25f), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                         }
                     }
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
-
+                // Income/Expense metrics row cleanly visible at bottom of every card!
                 IncomeExpenseMetricsRow(totalIncome, totalExpense, currencySymbol, isDataVisible)
             }
         }
