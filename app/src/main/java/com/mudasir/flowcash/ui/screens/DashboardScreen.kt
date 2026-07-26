@@ -37,7 +37,10 @@ import android.content.res.Configuration
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
@@ -204,7 +207,7 @@ fun DashboardScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("Welcome back 👋", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            AnimatedThunderTagline(textStyle = MaterialTheme.typography.bodySmall)
                             Text(userName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
                         }
                     }
@@ -495,7 +498,7 @@ fun DashboardScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("Welcome back 👋", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            AnimatedThunderTagline(textStyle = MaterialTheme.typography.bodyMedium)
                             Text(userName, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
                         }
                     }
@@ -1753,5 +1756,51 @@ fun formatRelativeTime(timestamp: Long): String {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun AnimatedThunderTagline(
+    textStyle: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyMedium
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "ThunderPulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.88f,
+        targetValue = 1.25f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ThunderScale"
+    )
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.65f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(700, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "ThunderAlpha"
+    )
+
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "Smart Cash Flow",
+            style = textStyle.copy(fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(modifier = Modifier.width(3.dp))
+        Icon(
+            imageVector = Icons.Default.Bolt,
+            contentDescription = "Thunder",
+            tint = androidx.compose.ui.graphics.Color(0xFFFFB300),
+            modifier = Modifier
+                .size(16.dp)
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    this.alpha = alpha
+                }
+        )
     }
 }

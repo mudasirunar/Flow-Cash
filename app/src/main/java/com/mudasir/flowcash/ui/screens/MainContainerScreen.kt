@@ -95,6 +95,7 @@ import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.data.local.entity.AccountEntity
 import com.mudasir.flowcash.data.model.CategoryType
 import com.mudasir.flowcash.data.model.TransactionType
+import com.mudasir.flowcash.ui.components.FloatingWelcomeBanner
 import com.mudasir.flowcash.data.model.TransactionItem
 import com.mudasir.flowcash.ui.theme.ExpenseRed
 import com.mudasir.flowcash.ui.theme.IncomeGreen
@@ -313,6 +314,15 @@ fun MainContainerScreen(
             }
         }
     }
+
+    val welcomeEvent = authState.welcomeEvent
+    val isDashboardLoading by dashboardViewModel.isLoading.collectAsState()
+    FloatingWelcomeBanner(
+        isVisible = welcomeEvent != null && !isDashboardLoading,
+        userName = welcomeEvent?.name ?: userName,
+        isNewUser = welcomeEvent?.isNewUser ?: false,
+        onDismiss = { authViewModel.clearWelcomeEvent() }
+    )
 
     if (showAccountRequiredDialog) {
         androidx.compose.material3.AlertDialog(

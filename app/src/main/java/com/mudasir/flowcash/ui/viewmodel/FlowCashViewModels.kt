@@ -30,11 +30,18 @@ import com.mudasir.flowcash.data.repository.AuthRepository
 import com.mudasir.flowcash.data.repository.FirebaseAuthRepositoryImpl
 
 @Immutable
+data class WelcomeEvent(
+    val name: String,
+    val isNewUser: Boolean
+)
+
+@Immutable
 data class AuthUiState(
     val isLoggedIn: Boolean = false,
     val isLoading: Boolean = false,
     val user: UserProfile? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val welcomeEvent: WelcomeEvent? = null
 )
 
 class AuthViewModel @JvmOverloads constructor(
@@ -99,6 +106,10 @@ class AuthViewModel @JvmOverloads constructor(
         _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
+    fun clearWelcomeEvent() {
+        _uiState.value = _uiState.value.copy(welcomeEvent = null)
+    }
+
     fun login(email: String, pass: String, rememberMe: Boolean = true, onSuccess: () -> Unit) {
         val trimmedEmail = email.trim()
         if (trimmedEmail.isBlank() || pass.isBlank()) {
@@ -112,7 +123,12 @@ class AuthViewModel @JvmOverloads constructor(
             val result = authRepository.loginWithEmail(trimmedEmail, pass)
             result.onSuccess { userProfile ->
                 userPreferences.saveRememberMe(rememberMe, trimmedEmail)
-                _uiState.value = AuthUiState(isLoggedIn = true, isLoading = false, user = userProfile)
+                _uiState.value = AuthUiState(
+                    isLoggedIn = true,
+                    isLoading = false,
+                    user = userProfile,
+                    welcomeEvent = WelcomeEvent(name = userProfile.name, isNewUser = false)
+                )
                 onSuccess()
             }.onFailure { exception ->
                 setErrorMessage(formatAuthErrorMessage(exception))
@@ -153,7 +169,12 @@ class AuthViewModel @JvmOverloads constructor(
             val result = authRepository.signUpWithEmail(trimmedFirst, trimmedLast, trimmedEmail, pass)
             result.onSuccess { userProfile ->
                 userPreferences.saveRememberMe(true, trimmedEmail)
-                _uiState.value = AuthUiState(isLoggedIn = true, isLoading = false, user = userProfile)
+                _uiState.value = AuthUiState(
+                    isLoggedIn = true,
+                    isLoading = false,
+                    user = userProfile,
+                    welcomeEvent = WelcomeEvent(name = userProfile.name, isNewUser = true)
+                )
                 onSuccess()
             }.onFailure { exception ->
                 setErrorMessage(formatAuthErrorMessage(exception))
@@ -167,7 +188,12 @@ class AuthViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             val result = authRepository.signInWithCredential(credential)
             result.onSuccess { userProfile ->
-                _uiState.value = AuthUiState(isLoggedIn = true, isLoading = false, user = userProfile)
+                _uiState.value = AuthUiState(
+                    isLoggedIn = true,
+                    isLoading = false,
+                    user = userProfile,
+                    welcomeEvent = WelcomeEvent(name = userProfile.name, isNewUser = false)
+                )
                 onSuccess()
             }.onFailure { exception ->
                 setErrorMessage(formatAuthErrorMessage(exception))
