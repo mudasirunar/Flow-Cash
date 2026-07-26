@@ -653,7 +653,7 @@ fun AddTransactionSheetContent(
     var selectedCategory by rememberSaveable(transactionToEdit) { mutableStateOf(transactionToEdit?.category ?: CategoryType.SALARY) }
     LaunchedEffect(selectedType) {
         if (!selectedCategory.isApplicableTo(selectedType)) {
-            selectedCategory = if (selectedType == TransactionType.INCOME) CategoryType.SALARY else CategoryType.FOOD
+            selectedCategory = if (selectedType == TransactionType.INCOME) CategoryType.SALARY else CategoryType.SHOPPING
         }
     }
     var customCategoryText by rememberSaveable(transactionToEdit) { mutableStateOf(if (transactionToEdit?.category == CategoryType.OTHER) transactionToEdit.subtitle else "") }
