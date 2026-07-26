@@ -288,11 +288,32 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         initialValue = "$"
     )
 
+    val currencyCode: StateFlow<String> = themePreferences.currencyCodeFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = "USD"
+    )
+
     val biometricsEnabled: StateFlow<Boolean> = themePreferences.biometricsFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = false
     )
+
+    val dailyReminderEnabled: StateFlow<Boolean> = themePreferences.dailyReminderFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
+    )
+
+    val weeklySummaryEnabled: StateFlow<Boolean> = themePreferences.weeklySummaryFlow.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = true
+    )
+
+    private val _isResettingData = MutableStateFlow(false)
+    val isResettingData: StateFlow<Boolean> = _isResettingData.asStateFlow()
 
     val unsyncedCount: StateFlow<Int> = repository.unsyncedCount.stateIn(
         scope = viewModelScope,
@@ -306,9 +327,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun setCurrency(currency: String) {
+    fun setCurrency(symbol: String, code: String = "") {
         viewModelScope.launch {
-            themePreferences.setCurrency(currency)
+            themePreferences.setCurrency(symbol, code)
         }
     }
 
@@ -318,9 +339,25 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    fun clearLocalData() {
+    fun setDailyReminderEnabled(enabled: Boolean) {
         viewModelScope.launch {
+            themePreferences.setDailyReminderEnabled(enabled)
+        }
+    }
+
+    fun setWeeklySummaryEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            themePreferences.setWeeklySummaryEnabled(enabled)
+        }
+    }
+
+    fun clearLocalData(onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            _isResettingData.value = true
+            kotlinx.coroutines.delay(600)
             repository.clearDatabase()
+            _isResettingData.value = false
+            onComplete()
         }
     }
 }

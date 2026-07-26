@@ -21,8 +21,11 @@ class ThemePreferences(private val context: Context) {
     companion object {
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_CURRENCY = stringPreferencesKey("currency_symbol")
+        private val KEY_CURRENCY_CODE = stringPreferencesKey("currency_code")
         private val KEY_BIOMETRICS_ENABLED = booleanPreferencesKey("biometrics_enabled")
         private val KEY_SELECTED_ACCOUNT_ID = stringPreferencesKey("selected_account_id")
+        private val KEY_DAILY_REMINDER = booleanPreferencesKey("daily_reminder_enabled")
+        private val KEY_WEEKLY_SUMMARY = booleanPreferencesKey("weekly_summary_enabled")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
@@ -38,6 +41,10 @@ class ThemePreferences(private val context: Context) {
         preferences[KEY_CURRENCY] ?: "$"
     }
 
+    val currencyCodeFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_CURRENCY_CODE] ?: "USD"
+    }
+
     val biometricsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_BIOMETRICS_ENABLED] ?: false
     }
@@ -46,15 +53,26 @@ class ThemePreferences(private val context: Context) {
         preferences[KEY_SELECTED_ACCOUNT_ID] ?: ""
     }
 
+    val dailyReminderFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_DAILY_REMINDER] ?: true
+    }
+
+    val weeklySummaryFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_WEEKLY_SUMMARY] ?: true
+    }
+
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[KEY_THEME_MODE] = mode.name
         }
     }
 
-    suspend fun setCurrency(currency: String) {
+    suspend fun setCurrency(symbol: String, code: String = "") {
         context.dataStore.edit { preferences ->
-            preferences[KEY_CURRENCY] = currency
+            preferences[KEY_CURRENCY] = symbol
+            if (code.isNotBlank()) {
+                preferences[KEY_CURRENCY_CODE] = code
+            }
         }
     }
 
@@ -67,6 +85,18 @@ class ThemePreferences(private val context: Context) {
     suspend fun setSelectedAccountId(id: String) {
         context.dataStore.edit { preferences ->
             preferences[KEY_SELECTED_ACCOUNT_ID] = id
+        }
+    }
+
+    suspend fun setDailyReminderEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_DAILY_REMINDER] = enabled
+        }
+    }
+
+    suspend fun setWeeklySummaryEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_WEEKLY_SUMMARY] = enabled
         }
     }
 }
