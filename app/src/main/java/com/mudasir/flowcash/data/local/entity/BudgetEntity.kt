@@ -10,6 +10,7 @@ data class BudgetEntity(
     val limitAmount: Double,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
+    val lastUpdatedServerTimestamp: Long = 0L,
     val isSynced: Boolean = false,
     val isDeleted: Boolean = false
 )

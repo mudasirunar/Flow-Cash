@@ -178,6 +178,11 @@ class AuthViewModel @JvmOverloads constructor(
     fun logout() {
         authRepository.logout()
         com.mudasir.flowcash.util.GoogleAuthHelper.signOut(getApplication())
+        viewModelScope.launch {
+            val db = FlowCashDatabase.getDatabase(getApplication())
+            val repo = TransactionRepository(db.transactionDao(), db.budgetDao(), db.accountDao())
+            repo.clearLocalDatabase()
+        }
         _uiState.value = AuthUiState(isLoggedIn = false, user = null)
     }
 
@@ -232,6 +237,19 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val database = FlowCashDatabase.getDatabase(application)
     private val repository = TransactionRepository(database.transactionDao(), database.budgetDao(), database.accountDao())
     private val userPreferences = UserPreferences(application)
+
+    val syncState: StateFlow<com.mudasir.flowcash.data.remote.SyncState> = repository.syncState
+
+    init {
+        val currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser
+        if (currentUser != null) {
+            repository.startSync(currentUser.uid)
+        }
+    }
+
+    fun startUserSync(userId: String) {
+        repository.startSync(userId)
+    }
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedFilter = MutableStateFlow<TransactionType?>(null)
@@ -501,7 +519,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             _isResettingData.value = true
             delay(600)
-            repository.clearDatabase()
+            repository.clearLocalDatabase()
             _isResettingData.value = false
             onComplete()
         }

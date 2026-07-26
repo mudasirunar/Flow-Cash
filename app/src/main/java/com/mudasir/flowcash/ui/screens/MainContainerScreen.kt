@@ -148,6 +148,29 @@ fun MainContainerScreen(
         accounts.find { it.id == editingAccountId }
     }
 
+    val syncState by dashboardViewModel.syncState.collectAsState()
+
+    LaunchedEffect(authState.user?.id) {
+        authState.user?.id?.let { uid ->
+            dashboardViewModel.startUserSync(uid)
+        }
+    }
+
+    // Remote Deletion Guard: Close active edit sheets if the target item is deleted remotely
+    val allTransactions by dashboardViewModel.transactions.collectAsState()
+    LaunchedEffect(accounts, allTransactions) {
+        if (editingAccountId != null && accounts.none { it.id == editingAccountId }) {
+            showAddAccountScreen = false
+            editingAccountId = null
+        }
+        if (transactionToEdit != null && allTransactions.none { it.id == transactionToEdit?.id }) {
+            transactionToEdit = null
+        }
+        if (selectedTransactionForDetails != null && allTransactions.none { it.id == selectedTransactionForDetails?.id }) {
+            selectedTransactionForDetails = null
+        }
+    }
+
     val userName = authState.user?.name ?: "User"
     val userEmail = authState.user?.email ?: "user@example.com"
 

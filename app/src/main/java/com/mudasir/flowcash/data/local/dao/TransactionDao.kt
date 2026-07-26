@@ -14,14 +14,17 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE isDeleted = 0 ORDER BY timestamp DESC")
     fun getAllTransactionsFlow(): Flow<List<TransactionEntity>>
 
-    @Query("DELETE FROM transactions WHERE accountName = :accountName")
-    suspend fun deleteByAccountName(accountName: String)
+    @Query("SELECT * FROM transactions WHERE isDeleted = 0 ORDER BY timestamp DESC")
+    suspend fun getAllTransactionsList(): List<TransactionEntity>
 
-    @Query("SELECT * FROM transactions WHERE isSynced = 0 AND isDeleted = 0")
+    @Query("SELECT * FROM transactions WHERE isSynced = 0")
     suspend fun getUnsyncedTransactions(): List<TransactionEntity>
 
     @Query("SELECT COUNT(*) FROM transactions WHERE isSynced = 0 AND isDeleted = 0")
     fun getUnsyncedCountFlow(): Flow<Int>
+
+    @Query("DELETE FROM transactions WHERE accountName = :accountName")
+    suspend fun deleteByAccountName(accountName: String)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTransaction(transaction: TransactionEntity)
@@ -32,8 +35,8 @@ interface TransactionDao {
     @Update
     suspend fun updateTransaction(transaction: TransactionEntity)
 
-    @Query("UPDATE transactions SET isDeleted = 1, isSynced = 0 WHERE id = :id")
-    suspend fun softDeleteById(id: String)
+    @Query("UPDATE transactions SET isDeleted = 1, isSynced = 0, updatedAt = :timestamp WHERE id = :id")
+    suspend fun softDeleteById(id: String, timestamp: Long = System.currentTimeMillis())
 
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun deletePermanently(id: String)
