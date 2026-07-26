@@ -47,6 +47,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -558,13 +560,21 @@ private fun AccountForm(
         )
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+        val accountTypeLazyState = rememberLazyListState()
+        LaunchedEffect(selectedType) {
+            val index = ACCOUNT_TYPES.indexOfFirst { it.first == selectedType }
+            if (index >= 0) {
+                accountTypeLazyState.animateScrollToItem(index)
+            }
+        }
+
+        LazyRow(
+            state = accountTypeLazyState,
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ACCOUNT_TYPES.forEach { (type, icon) ->
+            items(ACCOUNT_TYPES.size) { index ->
+                val (type, icon) = ACCOUNT_TYPES[index]
                 val label = type.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
                 FilterChip(
                     selected = selectedType == type,
@@ -639,13 +649,21 @@ private fun AccountForm(
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                val cardNetworkLazyState = rememberLazyListState()
+                LaunchedEffect(selectedNetwork) {
+                    val index = CARD_NETWORKS.indexOf(selectedNetwork)
+                    if (index >= 0) {
+                        cardNetworkLazyState.animateScrollToItem(index)
+                    }
+                }
+
+                LazyRow(
+                    state = cardNetworkLazyState,
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    CARD_NETWORKS.forEach { net ->
+                    items(CARD_NETWORKS.size) { index ->
+                        val net = CARD_NETWORKS[index]
                         val isSel = selectedNetwork == net
                         Box(
                             modifier = Modifier
