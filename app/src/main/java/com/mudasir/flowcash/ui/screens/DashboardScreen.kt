@@ -309,7 +309,8 @@ fun DashboardScreen(
                                             currencySymbol = currencySymbol,
                                             isDataVisible = isDataVisible,
                                             onToggleVisibility = { isDataVisible = !isDataVisible },
-                                            onClick = { showBottomSheetSelector = true }
+                                            onClick = { showBottomSheetSelector = true },
+                                            onEditClick = { onEditAccountClick(account) }
                                         )
                                     }
                                 }
@@ -537,7 +538,8 @@ fun DashboardScreen(
                                         currencySymbol = currencySymbol,
                                         isDataVisible = isDataVisible,
                                         onToggleVisibility = { isDataVisible = !isDataVisible },
-                                        onClick = { showBottomSheetSelector = true }
+                                        onClick = { showBottomSheetSelector = true },
+                                        onEditClick = { onEditAccountClick(account) }
                                     )
                                 }
                             }
@@ -657,10 +659,6 @@ fun DashboardScreen(
                             dashboardViewModel.setSelectedAccount(account)
                             showBottomSheetSelector = false
                         },
-                        onEdit = {
-                            showBottomSheetSelector = false
-                            onEditAccountClick(account) // Opens AddAccountScreen pre-filled
-                        },
                         onDelete = {
                             showBottomSheetSelector = false
                             deletingAccountId = account.id // Triggers Confirmation Dialog
@@ -745,7 +743,6 @@ private fun AccountSelectorRow(
     isSelected: Boolean,
     isAllAccounts: Boolean = false,
     onClick: () -> Unit,
-    onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
     Row(
@@ -787,20 +784,8 @@ private fun AccountSelectorRow(
                 )
             }
 
-            // Show Edit & Delete actions for custom accounts
+            // Show Delete action for custom accounts
             if (!isAllAccounts) {
-                IconButton(
-                    onClick = onEdit,
-                    modifier = Modifier.size(32.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Account",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
                 IconButton(
                     onClick = onDelete,
                     modifier = Modifier.size(32.dp)
@@ -996,7 +981,8 @@ private fun SelectedAccountCard(
     currencySymbol: String,
     isDataVisible: Boolean,
     onToggleVisibility: () -> Unit,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEditClick: () -> Unit
 ) {
     val startColor = parseHexColor(account.cardColorStart)
     val endColor = parseHexColor(account.cardColorEnd)
@@ -1022,6 +1008,7 @@ private fun SelectedAccountCard(
                 .clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(startColor, endColor)))
                 .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                .clickable { onEditClick() }
                 .padding(22.dp)
         ) {
             Column {
