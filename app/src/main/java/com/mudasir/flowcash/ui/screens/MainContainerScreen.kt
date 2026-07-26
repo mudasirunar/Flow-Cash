@@ -56,6 +56,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,14 +100,21 @@ fun MainContainerScreen(
         BottomNavItem.Settings
     )
 
-    var selectedIndex by remember { mutableIntStateOf(0) }
-    var showAddModal by remember { mutableStateOf(false) }
-    var showAddAccountScreen by remember { mutableStateOf(false) }
+    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
+    var showAddModal by rememberSaveable { mutableStateOf(false) }
+    var showAddAccountScreen by rememberSaveable { mutableStateOf(false) }
 
-    var accountToEdit by remember { mutableStateOf<AccountEntity?>(null) }
+    var editingAccountId by rememberSaveable { mutableStateOf<String?>(null) }
 
     val authState by authViewModel.uiState.collectAsState()
     val currency by settingsViewModel.currency.collectAsState()
+    val accountsState by dashboardViewModel.accounts.collectAsState()
+    val accounts = remember(accountsState) { accountsState ?: emptyList() }
+    var showAccountRequiredDialog by rememberSaveable { mutableStateOf(false) }
+
+    val accountToEdit = remember(editingAccountId, accounts) {
+        accounts.find { it.id == editingAccountId }
+    }
 
     val userName = authState.user?.name ?: "Mudasir"
     val userEmail = authState.user?.email ?: "mudasir@flowcash.io"
@@ -115,7 +123,7 @@ fun MainContainerScreen(
     if (showAddAccountScreen) {
         BackHandler {
             showAddAccountScreen = false
-            accountToEdit = null
+            editingAccountId = null
         }
 
         // Fullscreen overlay hides bottom bar & covers status bar properly
@@ -124,16 +132,16 @@ fun MainContainerScreen(
             onSave = { account ->
                 dashboardViewModel.addAccount(account)
                 showAddAccountScreen = false
-                accountToEdit = null
+                editingAccountId = null
             },
             onDelete = { account ->
                 dashboardViewModel.deleteAccountAndTransactions(account)
                 showAddAccountScreen = false
-                accountToEdit = null
+                editingAccountId = null
             },
             onBack = {
                 showAddAccountScreen = false
-                accountToEdit = null
+                editingAccountId = null
             }
         )
     } else {
@@ -190,20 +198,32 @@ fun MainContainerScreen(
                             dashboardViewModel = dashboardViewModel,
                             userName = userName,
                             currencySymbol = currency,
-                            onAddTransactionClick = { showAddModal = true },
+                            onAddTransactionClick = {
+                                if (accounts.isEmpty()) {
+                                    showAccountRequiredDialog = true
+                                } else {
+                                    showAddModal = true
+                                }
+                            },
                             onAddAccountClick = {
-                                accountToEdit = null
+                                editingAccountId = null
                                 showAddAccountScreen = true
                             },
                             onEditAccountClick = { account ->
-                                accountToEdit = account
+                                editingAccountId = account.id
                                 showAddAccountScreen = true
                             }
                         )
                         1 -> TransactionsScreen(
                             dashboardViewModel = dashboardViewModel,
                             currencySymbol = currency,
-                            onAddTransactionClick = { showAddModal = true }
+                            onAddTransactionClick = {
+                                if (accounts.isEmpty()) {
+                                    showAccountRequiredDialog = true
+                                } else {
+                                    showAddModal = true
+                                }
+                            }
                         )
                         2 -> AnalyticsScreen(
                             dashboardViewModel = dashboardViewModel,
@@ -221,6 +241,71 @@ fun MainContainerScreen(
             }
         }
     }
+
+    if (showAccountRequiredDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showAccountRequiredDialog = false },
+            title = {
+                Text(
+                    text = "Account Required",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            },
+            text = {
+                Text(
+                    text = "You need to create a card or wallet account before adding transactions.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showAccountRequiredDialog = false
+                        editingAccountId = null
+                        showAddAccountScreen = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Create Account", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { showAccountRequiredDialog = false },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showAddModal) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showAddModal = false },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            AddTransactionSheetContent(
+                currencySymbol = currency,
+                accountsList = accounts.map { it.name },
+                onAdd = { title, amt, type, category, accountName, note ->
+                    dashboardViewModel.addTransaction(
+                        title = title,
+                        amount = amt,
+                        type = type,
+                        category = category,
+                        accountName = accountName,
+                        note = note
+                    )
+                    showAddModal = false
+                }
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -230,12 +315,12 @@ fun AddTransactionSheetContent(
     accountsList: List<String> = listOf("Main Wallet"),
     onAdd: (title: String, amount: Double, type: TransactionType, category: CategoryType, account: String, note: String?) -> Unit
 ) {
-    var selectedType by remember { mutableStateOf(TransactionType.EXPENSE) }
-    var title by remember { mutableStateOf("") }
-    var amountText by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf(CategoryType.FOOD) }
-    var selectedAccount by remember { mutableStateOf(accountsList.firstOrNull() ?: "Main Wallet") }
-    var noteText by remember { mutableStateOf("") }
+    var selectedType by rememberSaveable { mutableStateOf(TransactionType.EXPENSE) }
+    var title by rememberSaveable { mutableStateOf("") }
+    var amountText by rememberSaveable { mutableStateOf("") }
+    var selectedCategory by rememberSaveable { mutableStateOf(CategoryType.FOOD) }
+    var selectedAccount by rememberSaveable { mutableStateOf(accountsList.firstOrNull() ?: "Main Wallet") }
+    var noteText by rememberSaveable { mutableStateOf("") }
 
     Column(
         modifier = Modifier

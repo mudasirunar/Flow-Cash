@@ -19,7 +19,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Immutable
@@ -82,10 +85,38 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val database = FlowCashDatabase.getDatabase(application)
     private val repository = TransactionRepository(database.transactionDao(), database.budgetDao(), database.accountDao())
+    private val themePreferences = ThemePreferences(application)
 
     private val _searchQuery = MutableStateFlow("")
     private val _selectedFilter = MutableStateFlow<TransactionType?>(null)
     private val _selectedAccount = MutableStateFlow<AccountEntity?>(null)
+
+    val accounts: StateFlow<List<AccountEntity>?> = repository.allAccounts
+        .map<List<AccountEntity>, List<AccountEntity>?> { it }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
+    val isLoading: StateFlow<Boolean> = accounts
+        .map { it == null }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = true
+        )
+
+    init {
+        viewModelScope.launch {
+            val savedId = themePreferences.selectedAccountIdFlow.first()
+            if (savedId.isNotBlank()) {
+                val accountList = repository.allAccounts.first()
+                val matched = accountList.find { it.id == savedId }
+                _selectedAccount.value = matched
+            }
+        }
+    }
 
     val transactions: StateFlow<List<TransactionItem>> = repository.allTransactions.stateIn(
         scope = viewModelScope,
@@ -110,12 +141,6 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
     val selectedFilter: StateFlow<TransactionType?> = _selectedFilter.asStateFlow()
     val selectedAccount: StateFlow<AccountEntity?> = _selectedAccount.asStateFlow()
-
-    val accounts: StateFlow<List<AccountEntity>> = repository.allAccounts.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
 
     val budgets: StateFlow<List<BudgetEntity>> = repository.allBudgets.stateIn(
         scope = viewModelScope,
@@ -143,6 +168,9 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun setSelectedAccount(account: AccountEntity?) {
         _selectedAccount.value = account
+        viewModelScope.launch {
+            themePreferences.setSelectedAccountId(account?.id ?: "")
+        }
     }
 
     fun updateSearchQuery(query: String) {
@@ -187,10 +215,10 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             repository.deleteTransactionsByAccountName(account.name)
             // Delete the account entity itself
             repository.deleteAccount(account.id)
-
+ 
             // Reset selected account filter if the active account was deleted
             if (_selectedAccount.value?.id == account.id) {
-                _selectedAccount.value = null
+                setSelectedAccount(null)
             }
         }
     }

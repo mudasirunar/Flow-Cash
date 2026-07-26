@@ -40,7 +40,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             val settingsViewModel: SettingsViewModel = viewModel()
             val authViewModel: AuthViewModel = viewModel()
-            val dashboardViewModel: DashboardViewModel = viewModel()
 
             val themeMode by settingsViewModel.themeMode.collectAsState()
 
@@ -141,6 +140,7 @@ class MainActivity : ComponentActivity() {
                                     fadeOut(animationSpec = tween(300))
                         }
                     ) {
+                        val dashboardViewModel: DashboardViewModel = viewModel()
                         MainContainerScreen(
                             authViewModel = authViewModel,
                             dashboardViewModel = dashboardViewModel,

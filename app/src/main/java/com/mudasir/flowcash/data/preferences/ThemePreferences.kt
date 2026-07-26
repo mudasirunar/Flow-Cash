@@ -22,6 +22,7 @@ class ThemePreferences(private val context: Context) {
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
         private val KEY_CURRENCY = stringPreferencesKey("currency_symbol")
         private val KEY_BIOMETRICS_ENABLED = booleanPreferencesKey("biometrics_enabled")
+        private val KEY_SELECTED_ACCOUNT_ID = stringPreferencesKey("selected_account_id")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
@@ -41,6 +42,10 @@ class ThemePreferences(private val context: Context) {
         preferences[KEY_BIOMETRICS_ENABLED] ?: false
     }
 
+    val selectedAccountIdFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_SELECTED_ACCOUNT_ID] ?: ""
+    }
+
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[KEY_THEME_MODE] = mode.name
@@ -56,6 +61,12 @@ class ThemePreferences(private val context: Context) {
     suspend fun setBiometricsEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[KEY_BIOMETRICS_ENABLED] = enabled
+        }
+    }
+
+    suspend fun setSelectedAccountId(id: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_SELECTED_ACCOUNT_ID] = id
         }
     }
 }
