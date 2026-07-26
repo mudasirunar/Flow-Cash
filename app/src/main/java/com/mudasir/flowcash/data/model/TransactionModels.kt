@@ -64,6 +64,7 @@ data class UserProfile(
     val name: String,
     val email: String,
     val profilePicUrl: String? = null,
+    val avatarColorHex: String? = null,
     val currencySymbol: String = "$"
 )
 

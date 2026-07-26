@@ -1,6 +1,7 @@
 package com.mudasir.flowcash.util
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import com.mudasir.flowcash.ui.theme.AvatarColors
 import kotlin.math.abs
 
@@ -17,9 +18,21 @@ object UserAvatarUtils {
         }
     }
 
-    fun getAvatarColorForUser(name: String?, email: String?): Color {
-        val key = "${name.orEmpty()}_${email.orEmpty()}"
-        val hash = abs(key.hashCode())
+    fun getAvatarColorHexForUser(email: String?, name: String? = null): String {
+        val color = getAvatarColorForUser(name = name, email = email)
+        return String.format("#%06X", (0xFFFFFF and color.toArgb()))
+    }
+
+    fun getAvatarColorForUser(name: String?, email: String? = null, customHex: String? = null): Color {
+        if (!customHex.isNullOrBlank()) {
+            try {
+                return Color(android.graphics.Color.parseColor(customHex))
+            } catch (_: Exception) {}
+        }
+        val identifier = email?.trim()?.lowercase()?.ifBlank { null }
+            ?: name?.trim()?.lowercase()?.ifBlank { null }
+            ?: "flowcash_user"
+        val hash = abs(identifier.hashCode())
         val index = hash % AvatarColors.size
         return AvatarColors[index]
     }

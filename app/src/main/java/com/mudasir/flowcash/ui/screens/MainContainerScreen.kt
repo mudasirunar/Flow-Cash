@@ -148,8 +148,8 @@ fun MainContainerScreen(
         accounts.find { it.id == editingAccountId }
     }
 
-    val userName = authState.user?.name ?: "Mudasir"
-    val userEmail = authState.user?.email ?: "mudasir@flowcash.io"
+    val userName = authState.user?.name ?: "User"
+    val userEmail = authState.user?.email ?: "user@example.com"
 
     // Back handling to return to Dashboard (main screen) from other tabs before exiting
     if (selectedIndex != 0 && !showAddAccountScreen) {
@@ -236,6 +236,9 @@ fun MainContainerScreen(
                         0 -> DashboardScreen(
                             dashboardViewModel = dashboardViewModel,
                             userName = userName,
+                            userEmail = userEmail,
+                            profilePicUrl = authState.user?.profilePicUrl,
+                            avatarColorHex = authState.user?.avatarColorHex,
                             currencySymbol = currency,
                             onAddTransactionClick = { filterType ->
                                 if (accounts.isEmpty()) {
@@ -277,6 +280,7 @@ fun MainContainerScreen(
                         3 -> SettingsScreen(
                             settingsViewModel = settingsViewModel,
                             authViewModel = authViewModel,
+                            dashboardViewModel = dashboardViewModel,
                             userName = userName,
                             userEmail = userEmail,
                             onLogoutClick = onLogoutClick

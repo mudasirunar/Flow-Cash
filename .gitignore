@@ -3,6 +3,13 @@
 .gradle/
 /build/
 /*/build/
+/release/
+/*/release/
+*.apk
+*.aab
+*.ap_
+*.dex
+output-metadata.json
 /captures/
 .externalNativeBuild/
 .cxx/
@@ -16,6 +23,8 @@ secrets.properties
 *.jks
 *.p12
 *.key
+google-services.json
+**/google-services.json
 
 # Kotlin compiler & daemon caches
 .kotlin/

@@ -65,7 +65,9 @@ class MainActivity : ComponentActivity() {
                     ) {
                         SplashScreen(
                             onSplashFinished = {
-                                navController.navigate("login") {
+                                val isLoggedIn = authViewModel.uiState.value.isLoggedIn
+                                val destination = if (isLoggedIn) "main" else "login"
+                                navController.navigate(destination) {
                                     popUpTo("splash") { inclusive = true }
                                 }
                             }

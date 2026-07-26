@@ -110,6 +110,7 @@ import com.mudasir.flowcash.data.local.entity.AccountEntity
 import com.mudasir.flowcash.data.model.CategoryType
 import com.mudasir.flowcash.data.model.TransactionItem
 import com.mudasir.flowcash.data.model.TransactionType
+import com.mudasir.flowcash.ui.components.UserProfileAvatar
 import com.mudasir.flowcash.ui.theme.ExpenseRed
 import com.mudasir.flowcash.ui.theme.IncomeGreen
 import com.mudasir.flowcash.ui.theme.PrimaryIndigo
@@ -120,7 +121,10 @@ import kotlin.math.absoluteValue
 @Composable
 fun DashboardScreen(
     dashboardViewModel: DashboardViewModel,
-    userName: String = "Mudasir",
+    userName: String = "User",
+    userEmail: String = "",
+    profilePicUrl: String? = null,
+    avatarColorHex: String? = null,
     currencySymbol: String = "$",
     onAddTransactionClick: (TransactionType?) -> Unit,
     onAddAccountClick: () -> Unit = {},
@@ -190,9 +194,19 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text("Welcome back 👋", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(userName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        UserProfileAvatar(
+                            name = userName,
+                            email = userEmail,
+                            profilePicUrl = profilePicUrl,
+                            avatarColorHex = avatarColorHex,
+                            size = 42.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Welcome back 👋", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(userName, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
+                        }
                     }
                     Box(
                         modifier = Modifier
@@ -471,9 +485,19 @@ fun DashboardScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text("Welcome back 👋", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(userName, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        UserProfileAvatar(
+                            name = userName,
+                            email = userEmail,
+                            profilePicUrl = profilePicUrl,
+                            avatarColorHex = avatarColorHex,
+                            size = 46.dp
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Welcome back 👋", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(userName, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
+                        }
                     }
 
                     IconButton(

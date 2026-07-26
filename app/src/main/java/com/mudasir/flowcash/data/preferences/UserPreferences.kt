@@ -16,7 +16,7 @@ enum class ThemeMode {
     SYSTEM, LIGHT, DARK
 }
 
-class ThemePreferences(private val context: Context) {
+class UserPreferences(private val context: Context) {
 
     companion object {
         private val KEY_THEME_MODE = stringPreferencesKey("theme_mode")
@@ -26,6 +26,8 @@ class ThemePreferences(private val context: Context) {
         private val KEY_SELECTED_ACCOUNT_ID = stringPreferencesKey("selected_account_id")
         private val KEY_DAILY_REMINDER = booleanPreferencesKey("daily_reminder_enabled")
         private val KEY_WEEKLY_SUMMARY = booleanPreferencesKey("weekly_summary_enabled")
+        private val KEY_SAVED_EMAIL = stringPreferencesKey("saved_email")
+        private val KEY_REMEMBER_ME = booleanPreferencesKey("remember_me")
     }
 
     val themeModeFlow: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
@@ -59,6 +61,14 @@ class ThemePreferences(private val context: Context) {
 
     val weeklySummaryFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[KEY_WEEKLY_SUMMARY] ?: true
+    }
+
+    val savedEmailFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[KEY_SAVED_EMAIL] ?: ""
+    }
+
+    val rememberMeFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[KEY_REMEMBER_ME] ?: true
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {
@@ -97,6 +107,17 @@ class ThemePreferences(private val context: Context) {
     suspend fun setWeeklySummaryEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[KEY_WEEKLY_SUMMARY] = enabled
+        }
+    }
+
+    suspend fun saveRememberMe(remember: Boolean, email: String) {
+        context.dataStore.edit { preferences ->
+            preferences[KEY_REMEMBER_ME] = remember
+            if (remember) {
+                preferences[KEY_SAVED_EMAIL] = email
+            } else {
+                preferences[KEY_SAVED_EMAIL] = ""
+            }
         }
     }
 }

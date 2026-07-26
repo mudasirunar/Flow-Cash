@@ -66,9 +66,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.BuildConfig
 import com.mudasir.flowcash.data.preferences.ThemeMode
+import com.mudasir.flowcash.ui.components.UserProfileAvatar
 import com.mudasir.flowcash.ui.theme.ExpenseRed
 import com.mudasir.flowcash.ui.theme.PrimaryIndigo
 import com.mudasir.flowcash.ui.viewmodel.AuthViewModel
+import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 import com.mudasir.flowcash.ui.viewmodel.SettingsViewModel
 import com.mudasir.flowcash.util.UserAvatarUtils
 
@@ -97,8 +99,9 @@ val AvailableCurrencies = listOf(
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
     authViewModel: AuthViewModel,
-    userName: String = "Mudasir Unar",
-    userEmail: String = "mudasir@flowcash.io",
+    dashboardViewModel: DashboardViewModel? = null,
+    userName: String = "User",
+    userEmail: String = "user@example.com",
     onLogoutClick: () -> Unit
 ) {
     val themeMode by settingsViewModel.themeMode.collectAsState()
@@ -108,6 +111,14 @@ fun SettingsScreen(
     val dailyReminderEnabled by settingsViewModel.dailyReminderEnabled.collectAsState()
     val weeklySummaryEnabled by settingsViewModel.weeklySummaryEnabled.collectAsState()
     val isResettingData by settingsViewModel.isResettingData.collectAsState()
+
+    val accounts by (dashboardViewModel?.accounts?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
+    val transactions by (dashboardViewModel?.transactions?.collectAsState() ?: remember { mutableStateOf(emptyList()) })
+
+    val hasData = remember(accounts, transactions) {
+        !accounts.isNullOrEmpty() || transactions.isNotEmpty()
+    }
+    val isResetEnabled = hasData && !isResettingData
 
     var showResetDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
@@ -162,23 +173,14 @@ fun SettingsScreen(
                 .padding(18.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(avatarBgColor)
-                        .border(2.dp, Color.White.copy(alpha = 0.35f), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = initials,
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White,
-                            letterSpacing = 1.sp
-                        )
-                    )
-                }
+                val authState by authViewModel.uiState.collectAsState()
+                UserProfileAvatar(
+                    name = userName,
+                    email = userEmail,
+                    profilePicUrl = authState.user?.profilePicUrl,
+                    avatarColorHex = authState.user?.avatarColorHex,
+                    size = 60.dp
+                )
 
                 Spacer(modifier = Modifier.width(16.dp))
 
@@ -470,11 +472,18 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         // Data Management Section
+        val resetCardBgColor = if (isResetEnabled) ExpenseRed.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+        val resetCardBorderColor = if (isResetEnabled) ExpenseRed.copy(alpha = 0.25f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        val resetIconBgColor = if (isResetEnabled) ExpenseRed.copy(alpha = 0.15f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.12f)
+        val resetIconTint = if (isResetEnabled) ExpenseRed else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        val resetTitleColor = if (isResetEnabled) ExpenseRed else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+        val resetHeaderColor = if (isResetEnabled) ExpenseRed else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+
         Text(
             text = "Data Management",
             style = MaterialTheme.typography.titleSmall.copy(
                 fontWeight = FontWeight.Bold,
-                color = ExpenseRed
+                color = resetHeaderColor
             )
         )
 
@@ -484,10 +493,10 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .clickable { showResetDialog = true },
+                .clickable(enabled = isResetEnabled) { showResetDialog = true },
             shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = ExpenseRed.copy(alpha = 0.08f)),
-            border = BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.25f))
+            colors = CardDefaults.cardColors(containerColor = resetCardBgColor),
+            border = BorderStroke(1.dp, resetCardBorderColor)
         ) {
             Row(
                 modifier = Modifier
@@ -501,13 +510,13 @@ fun SettingsScreen(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(ExpenseRed.copy(alpha = 0.15f)),
+                            .background(resetIconBgColor),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.DeleteSweep,
                             contentDescription = "Reset Data",
-                            tint = ExpenseRed,
+                            tint = resetIconTint,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -517,13 +526,13 @@ fun SettingsScreen(
                             text = "Reset All App Data",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = ExpenseRed
+                                color = resetTitleColor
                             )
                         )
                         Text(
-                            text = "Clear all account balances and transaction history",
+                            text = if (hasData) "Clear all account balances and transaction history" else "No data registered yet (account empty)",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (isResetEnabled) 0.8f else 0.5f)
                         )
                     }
                 }
