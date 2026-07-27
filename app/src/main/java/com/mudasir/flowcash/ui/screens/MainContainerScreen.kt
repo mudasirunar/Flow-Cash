@@ -1,5 +1,14 @@
 package com.mudasir.flowcash.ui.screens
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
@@ -23,6 +32,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -116,14 +126,8 @@ import com.mudasir.flowcash.util.BiometricAuthHelper
 import com.mudasir.flowcash.ui.viewmodel.AuthViewModel
 import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 import com.mudasir.flowcash.ui.viewmodel.SettingsViewModel
-import kotlinx.coroutines.launch
-
-sealed class BottomNavItem(val route: String, val title: String, @DrawableRes val iconRes: Int) {
-    data object Dashboard : BottomNavItem("dashboard", "Dashboard", R.drawable.ic_home)
-    data object Transactions : BottomNavItem("transactions", "History", R.drawable.ic_history)
-    data object Analytics : BottomNavItem("analytics", "Analytics", R.drawable.ic_analytics)
-    data object Settings : BottomNavItem("settings", "Settings", R.drawable.ic_settings)
-}
+import com.mudasir.flowcash.ui.components.BottomNavItem
+import com.mudasir.flowcash.ui.components.FloatingBottomNavigation
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -227,40 +231,13 @@ fun MainContainerScreen(
         )
     } else {
         Scaffold(
-            bottomBar = {
-                NavigationBar(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 8.dp
-                ) {
-                    items.forEachIndexed { index, item ->
-                        val isSelected = selectedIndex == index
-                        NavigationBarItem(
-                            icon = {
-                                Icon(
-                                    painter = painterResource(id = item.iconRes),
-                                    contentDescription = item.title,
-                                    tint = androidx.compose.ui.graphics.Color.Unspecified,
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .graphicsLayer {
-                                            alpha = if (isSelected) 1.0f else 0.45f
-                                        }
-                                )
-                            },
-                            label = { Text(item.title) },
-                            selected = isSelected,
-                            onClick = { selectedIndex = index },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                            )
-                        )
-                    }
-                }
-            }
+            containerColor = Color.Transparent
         ) { innerPadding ->
-            Box(modifier = Modifier.padding(innerPadding)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = innerPadding.calculateTopPadding())
+            ) {
                 AnimatedContent(
                     targetState = selectedIndex,
                     transitionSpec = {
@@ -358,6 +335,13 @@ fun MainContainerScreen(
                         )
                     }
                 }
+
+                FloatingBottomNavigation(
+                    items = items,
+                    selectedIndex = selectedIndex,
+                    onItemSelected = { selectedIndex = it },
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
             }
         }
     }
@@ -1085,3 +1069,4 @@ private fun getLocalAccountTypeIcon(type: String): ImageVector {
         else -> Icons.Default.Widgets
     }
 }
+
