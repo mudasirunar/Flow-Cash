@@ -824,6 +824,8 @@ fun CategoryProgressRow(
 ) {
     val isBudgetSet = budgetLimit > 0.0
     val isOverBudget = isBudgetSet && spending.amount > budgetLimit
+    val isUnderBudget = isBudgetSet && spending.amount <= budgetLimit
+
     val progressFraction = if (isBudgetSet) (spending.amount / budgetLimit).toFloat().coerceIn(0f, 1f) else spending.percentage / 100f
 
     val animatedProgress by animateFloatAsState(
@@ -832,17 +834,32 @@ fun CategoryProgressRow(
         label = "ProgressAnim"
     )
 
+    val cardBg = when {
+        isOverBudget -> ExpenseRed.copy(alpha = 0.08f)
+        isUnderBudget -> IncomeGreen.copy(alpha = 0.08f)
+        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+    }
+
+    val cardBorder = when {
+        isOverBudget -> ExpenseRed.copy(alpha = 0.4f)
+        isUnderBudget -> IncomeGreen.copy(alpha = 0.4f)
+        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+    }
+
+    val accentColor = when {
+        isOverBudget -> ExpenseRed
+        isUnderBudget -> IncomeGreen
+        else -> MaterialTheme.colorScheme.primary
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(
-                if (isOverBudget) ExpenseRed.copy(alpha = 0.08f)
-                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-            )
+            .background(cardBg)
             .border(
                 1.dp,
-                if (isOverBudget) ExpenseRed.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                cardBorder,
                 RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onEditBudgetClick)
@@ -866,7 +883,7 @@ fun CategoryProgressRow(
                         Text(
                             text = "Monthly Limit: $currencySymbol${String.format("%,.2f", budgetLimit)}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (isOverBudget) ExpenseRed else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = accentColor
                         )
                     } else {
                         Text(
@@ -886,14 +903,14 @@ fun CategoryProgressRow(
                         },
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = if (isOverBudget) ExpenseRed else MaterialTheme.colorScheme.primary
+                            color = accentColor
                         )
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Edit Budget",
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        tint = accentColor.copy(alpha = 0.8f),
                         modifier = Modifier.size(14.dp)
                     )
                 }
@@ -907,7 +924,7 @@ fun CategoryProgressRow(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(CircleShape),
-                color = if (isOverBudget) ExpenseRed else MaterialTheme.colorScheme.primary,
+                color = accentColor,
                 trackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
             )
 
@@ -918,6 +935,16 @@ fun CategoryProgressRow(
                     text = "⚠️ Over budget limit by $currencySymbol${String.format("%,.2f", excess)}!",
                     style = MaterialTheme.typography.labelSmall.copy(
                         color = ExpenseRed,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+            } else if (isUnderBudget) {
+                Spacer(modifier = Modifier.height(6.dp))
+                val remaining = budgetLimit - spending.amount
+                Text(
+                    text = "✅ Under budget • $currencySymbol${String.format("%,.2f", remaining)} remaining",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = IncomeGreen,
                         fontWeight = FontWeight.Bold
                     )
                 )
