@@ -12,6 +12,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -169,21 +170,20 @@ fun SearchBar(
                 enter = scaleIn(animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy)) + fadeIn(),
                 exit = scaleOut(animationSpec = tween(durationMillis = 150)) + fadeOut()
             ) {
-                IconButton(
-                    onClick = {
-                        onQueryChange("")
-                    },
+                Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(22.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.16f))
+                        .clickable { onQueryChange("") },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Clear search",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
-                            .size(16.dp)
+                            .size(13.dp)
                             .graphicsLayer {
                                 rotationZ = clearIconRotation
                             }

@@ -9,6 +9,9 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.graphicsLayer
@@ -350,8 +353,10 @@ fun MainContainerScreen(
                     }
                 }
 
+                val isImeVisible = WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
+
                 AnimatedVisibility(
-                    visible = !isDashboardLoading,
+                    visible = !isDashboardLoading && !isImeVisible,
                     enter = fadeIn(animationSpec = tween(300)) + slideInVertically(initialOffsetY = { it / 2 }),
                     exit = fadeOut(animationSpec = tween(200)) + slideOutVertically(targetOffsetY = { it / 2 }),
                     modifier = Modifier.align(Alignment.BottomCenter)

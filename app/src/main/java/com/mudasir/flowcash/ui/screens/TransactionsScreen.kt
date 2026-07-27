@@ -17,6 +17,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +35,8 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +44,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
+import com.mudasir.flowcash.data.model.TransactionType
+import com.mudasir.flowcash.ui.theme.ExpenseRed
+import com.mudasir.flowcash.ui.theme.IncomeGreen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -72,20 +82,20 @@ fun TransactionsScreen(
 ) {
     val allTransactions by dashboardViewModel.transactions.collectAsState()
     val searchQuery by dashboardViewModel.searchQuery.collectAsState()
+    val selectedFilter by dashboardViewModel.selectedFilter.collectAsState()
 
-    val transactions = remember(allTransactions, searchQuery) {
-        if (searchQuery.isBlank()) {
-            allTransactions
-        } else {
-            val query = searchQuery.trim()
-            allTransactions.filter { tx ->
-                tx.title.contains(query, ignoreCase = true) ||
-                        tx.accountName.contains(query, ignoreCase = true) ||
-                        tx.category.name.contains(query, ignoreCase = true) ||
-                        tx.subtitle.contains(query, ignoreCase = true) ||
-                        (tx.note != null && tx.note.contains(query, ignoreCase = true)) ||
-                        tx.amount.toString().contains(query, ignoreCase = true)
-            }
+    val transactions = remember(allTransactions, searchQuery, selectedFilter) {
+        val query = searchQuery.trim()
+        allTransactions.filter { tx ->
+            val matchesSearch = query.isBlank() ||
+                    tx.title.contains(query, ignoreCase = true) ||
+                    tx.accountName.contains(query, ignoreCase = true) ||
+                    tx.category.name.contains(query, ignoreCase = true) ||
+                    tx.subtitle.contains(query, ignoreCase = true) ||
+                    (tx.note != null && tx.note.contains(query, ignoreCase = true)) ||
+                    tx.amount.toString().contains(query, ignoreCase = true)
+            val matchesFilter = selectedFilter == null || tx.type == selectedFilter
+            matchesSearch && matchesFilter
         }
     }
 
@@ -99,6 +109,16 @@ fun TransactionsScreen(
 
     // Scroll state & FAB visibility tracking
     val listState = rememberLazyListState()
+
+    // IME Keyboard padding tracking
+    val imeBottomPadding = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+    val isImeOpen = imeBottomPadding > 0.dp
+
+    // Auto-scroll to top when search query or filter chip changes
+    LaunchedEffect(searchQuery, selectedFilter) {
+        listState.animateScrollToItem(0)
+    }
+
     var isFabVisible by remember { mutableStateOf(true) }
     var previousIndex by remember { mutableIntStateOf(0) }
     var previousScrollOffset by remember { mutableIntStateOf(0) }
@@ -176,7 +196,44 @@ fun TransactionsScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Filter Chips (All, Income, Expenses - No add button as FAB is available)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                FilterChip(
+                    selected = selectedFilter == null,
+                    onClick = { dashboardViewModel.setFilter(null) },
+                    label = { Text("All") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                    )
+                )
+                FilterChip(
+                    selected = selectedFilter == TransactionType.INCOME,
+                    onClick = { dashboardViewModel.setFilter(TransactionType.INCOME) },
+                    label = { Text("Income") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = IncomeGreen,
+                        selectedLabelColor = Color.White
+                    )
+                )
+                FilterChip(
+                    selected = selectedFilter == TransactionType.EXPENSE,
+                    onClick = { dashboardViewModel.setFilter(TransactionType.EXPENSE) },
+                    label = { Text("Expenses") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = ExpenseRed,
+                        selectedLabelColor = Color.White
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
 
             if (transactions.isEmpty()) {
                 Box(
@@ -269,7 +326,8 @@ fun TransactionsScreen(
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = if (isImeOpen) imeBottomPadding + 20.dp else bottomPadding)
                 ) {
                     items(
                         items = transactions,
@@ -283,16 +341,13 @@ fun TransactionsScreen(
                             onLongClick = { onTransactionLongClick(tx) }
                         )
                     }
-                    item {
-                        Spacer(modifier = Modifier.height(bottomPadding))
-                    }
                 }
             }
         }
 
         // Floating Action Button
         TransactionFab(
-            visible = isFabVisible,
+            visible = isFabVisible && !isImeOpen,
             onClick = onAddTransactionClick,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
