@@ -59,7 +59,8 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material.icons.filled.Savings
@@ -1062,9 +1063,9 @@ private fun getLocalAccountTypeIcon(type: String): ImageVector {
         "CARD" -> Icons.Default.CreditCard
         "CASH_WALLET" -> Icons.Default.Wallet
         "BANK_ACCOUNT" -> Icons.Default.AccountBalance
-        "INVESTMENT" -> Icons.AutoMirrored.Filled.ShowChart
+        "INVESTMENT" -> Icons.Default.PieChart
         "FREELANCE_INCOME" -> Icons.Default.Work
         "SAVINGS" -> Icons.Default.Savings
-        else -> Icons.Default.AccountBalanceWallet
+        else -> Icons.Default.Widgets
     }
 }

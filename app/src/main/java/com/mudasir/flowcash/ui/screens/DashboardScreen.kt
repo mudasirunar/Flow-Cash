@@ -41,7 +41,8 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.PieChart
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
@@ -1380,10 +1381,10 @@ fun getAccountTypeIcon(type: String): ImageVector {
         "CARD" -> Icons.Default.CreditCard
         "CASH_WALLET" -> Icons.Default.Wallet
         "BANK_ACCOUNT" -> Icons.Default.AccountBalance
-        "INVESTMENT" -> Icons.AutoMirrored.Filled.ShowChart
+        "INVESTMENT" -> Icons.Default.PieChart
         "FREELANCE_INCOME" -> Icons.Default.Work
         "SAVINGS" -> Icons.Default.Savings
-        else -> Icons.Default.AccountBalanceWallet
+        else -> Icons.Default.Widgets
     }
 }
 
@@ -1490,7 +1491,7 @@ fun getCategoryIcon(category: CategoryType): ImageVector {
     return when (category) {
         CategoryType.SALARY -> Icons.Default.Work
         CategoryType.FREELANCE -> Icons.Default.AttachMoney
-        CategoryType.INVESTMENT -> Icons.AutoMirrored.Filled.ShowChart
+        CategoryType.INVESTMENT -> Icons.Default.PieChart
         CategoryType.BUSINESS -> Icons.Default.Storefront
         CategoryType.GIFTS -> Icons.Default.CardGiftcard
         CategoryType.REFUNDS -> Icons.Default.Refresh
@@ -1504,7 +1505,7 @@ fun getCategoryIcon(category: CategoryType): ImageVector {
         CategoryType.TRAVEL -> Icons.Default.Flight
         CategoryType.RENT -> Icons.Default.Home
         CategoryType.TAX -> Icons.Default.AccountBalance
-        CategoryType.OTHER -> Icons.Default.Category
+        CategoryType.OTHER -> Icons.Default.Widgets
     }
 }
 

@@ -30,14 +30,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ShowChart
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Contactless
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Warning
 import com.mudasir.flowcash.ui.components.FlowCashConfirmDialog
-import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material.icons.filled.Work
@@ -110,10 +110,10 @@ val CARD_TEMPLATES = listOf(
 val ACCOUNT_TYPES = listOf(
     "CARD" to Icons.Default.CreditCard,
     "CASH_WALLET" to Icons.Default.Wallet,
-    "INVESTMENT" to Icons.AutoMirrored.Filled.ShowChart,
+    "INVESTMENT" to Icons.Default.PieChart,
     "FREELANCE_INCOME" to Icons.Default.Work,
     "SAVINGS" to Icons.Default.Savings,
-    "OTHER" to Icons.Default.MoreHoriz
+    "OTHER" to Icons.Default.Widgets
 )
 
 fun parseHexColor(hex: String): Color {
