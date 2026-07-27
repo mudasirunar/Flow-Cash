@@ -237,6 +237,7 @@ fun MainContainerScreen(
             accountToEdit = accountToEdit,
             onSave = { account ->
                 dashboardViewModel.addAccount(account)
+                dashboardViewModel.setSelectedAccount(account)
                 showAddAccountScreen = false
                 editingAccountId = null
             },

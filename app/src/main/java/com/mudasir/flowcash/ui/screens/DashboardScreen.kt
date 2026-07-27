@@ -281,12 +281,16 @@ fun DashboardScreen(
                         val listSize = pagerList.size
                         val initialPage = remember(listSize, selectedAccount) {
                             val currentSelected = selectedAccount
-                            val targetIndex = if (currentSelected == null) 0 else (accounts.indexOfFirst { it.id == currentSelected.id }.coerceAtLeast(0) + 1)
-                            5000 * listSize + targetIndex
+                            if (currentSelected == null) {
+                                0
+                            } else {
+                                val foundIndex = accounts.indexOfFirst { it.id == currentSelected.id }
+                                if (foundIndex >= 0) (foundIndex + 1).coerceIn(0, listSize - 1) else 0
+                            }
                         }
                         val pagerState = rememberPagerState(
                             initialPage = initialPage,
-                            pageCount = { Int.MAX_VALUE }
+                            pageCount = { listSize }
                         )
 
                         val globalIncome = remember(allTransactions) {
@@ -297,41 +301,14 @@ fun DashboardScreen(
                         }
                         val globalNetBalance = remember(globalIncome, globalExpense) { globalIncome - globalExpense }
 
-                        // Two-way sync: Pager -> ViewModel selection
-                        LaunchedEffect(pagerState, listSize, accounts) {
+                        // Sync active pager settled page directly to ViewModel selection without race conditions
+                        LaunchedEffect(pagerState, accounts) {
                             snapshotFlow { pagerState.settledPage }.collect { page ->
-                                if (listSize > 0) {
-                                    val currentMappedIndex = page % listSize
-                                    val currentSelectedAccount = pagerList.getOrNull(currentMappedIndex)
-                                    if (currentSelectedAccount is AccountEntity?) {
-                                        if (selectedAccount != currentSelectedAccount) {
-                                            dashboardViewModel.setSelectedAccount(currentSelectedAccount)
-                                        }
+                                if (!pagerState.isScrollInProgress) {
+                                    val currentSelected = if (page <= 0 || page > accounts.size) null else accounts.getOrNull(page - 1)
+                                    if (dashboardViewModel.selectedAccount.value != currentSelected) {
+                                        dashboardViewModel.setSelectedAccount(currentSelected)
                                     }
-                                }
-                            }
-                        }
-
-                        // Two-way sync: ViewModel selection -> Pager
-                        var isFirstPageSync by remember { mutableStateOf(true) }
-                        LaunchedEffect(selectedAccount, listSize, accounts) {
-                            if (listSize > 0) {
-                                val currentSelected = selectedAccount
-                                val targetIndex = if (currentSelected == null) 0 else accounts.indexOfFirst { it.id == currentSelected.id } + 1
-                                if (targetIndex >= 0) {
-                                    val currentMappedIndex = pagerState.currentPage % listSize
-                                    if (currentMappedIndex != targetIndex) {
-                                        val diff1 = targetIndex - currentMappedIndex
-                                        val diff2 = diff1 + listSize
-                                        val diff3 = diff1 - listSize
-                                        val offset = listOf(diff1, diff2, diff3).minByOrNull { kotlin.math.abs(it) } ?: diff1
-                                        if (isFirstPageSync) {
-                                            pagerState.scrollToPage(pagerState.currentPage + offset)
-                                        } else {
-                                            pagerState.animateScrollToPage(pagerState.currentPage + offset)
-                                        }
-                                    }
-                                    isFirstPageSync = false
                                 }
                             }
                         }
@@ -350,8 +327,7 @@ fun DashboardScreen(
                                     .fillMaxWidth()
                                     .height(205.dp)
                             ) { page ->
-                                val mappedIndex = page % listSize
-                                val item = pagerList[mappedIndex]
+                                val item = pagerList.getOrNull(page)
                                 val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
 
                                 Box(

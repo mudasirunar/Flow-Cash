@@ -123,6 +123,8 @@ class AuthViewModel @JvmOverloads constructor(
             val result = authRepository.loginWithEmail(trimmedEmail, pass)
             result.onSuccess { userProfile ->
                 userPreferences.saveRememberMe(rememberMe, trimmedEmail)
+                userPreferences.setCurrency(userProfile.currencySymbol, userProfile.currencyCode)
+                userPreferences.setSelectedAccountId("")
                 _uiState.value = AuthUiState(
                     isLoggedIn = true,
                     isLoading = false,
@@ -169,6 +171,8 @@ class AuthViewModel @JvmOverloads constructor(
             val result = authRepository.signUpWithEmail(trimmedFirst, trimmedLast, trimmedEmail, pass)
             result.onSuccess { userProfile ->
                 userPreferences.saveRememberMe(true, trimmedEmail)
+                userPreferences.setCurrency(userProfile.currencySymbol, userProfile.currencyCode)
+                userPreferences.setSelectedAccountId("")
                 _uiState.value = AuthUiState(
                     isLoggedIn = true,
                     isLoading = false,
@@ -188,6 +192,8 @@ class AuthViewModel @JvmOverloads constructor(
         viewModelScope.launch {
             val result = authRepository.signInWithCredential(credential)
             result.onSuccess { userProfile ->
+                userPreferences.setCurrency(userProfile.currencySymbol, userProfile.currencyCode)
+                userPreferences.setSelectedAccountId("")
                 _uiState.value = AuthUiState(
                     isLoggedIn = true,
                     isLoading = false,
@@ -282,7 +288,15 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun resetSelectedAccount() {
+        _selectedAccount.value = null
+        viewModelScope.launch {
+            userPreferences.setSelectedAccountId("")
+        }
+    }
+
     fun startUserSync(userId: String) {
+        resetSelectedAccount()
         repository.startSync(userId)
     }
 
@@ -537,9 +551,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    private val authRepository = com.mudasir.flowcash.data.repository.FirebaseAuthRepositoryImpl()
+
     fun setCurrency(symbol: String, code: String = "") {
         viewModelScope.launch {
             userPreferences.setCurrency(symbol, code)
+            try {
+                authRepository.updateUserCurrency(symbol, code)
+            } catch (_: Exception) { }
         }
     }
 

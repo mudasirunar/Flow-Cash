@@ -65,7 +65,8 @@ data class UserProfile(
     val email: String,
     val profilePicUrl: String? = null,
     val avatarColorHex: String? = null,
-    val currencySymbol: String = "$"
+    val currencySymbol: String = "$",
+    val currencyCode: String = "USD"
 )
 
 @Immutable

@@ -38,12 +38,25 @@ class FirebaseAuthRepositoryImpl(
     private suspend fun syncUserProfileToFirestore(fbUser: FirebaseUser, name: String, email: String): UserProfile {
         val colorHex = UserAvatarUtils.getAvatarColorHexForUser(email, name)
         val firestore = FirebaseFirestore.getInstance()
+
+        var remoteSymbol = "$"
+        var remoteCode = "USD"
+        try {
+            val snapshot = firestore.collection("users").document(fbUser.uid).get().await()
+            if (snapshot.exists()) {
+                snapshot.getString("currencySymbol")?.let { if (it.isNotBlank()) remoteSymbol = it }
+                snapshot.getString("currencyCode")?.let { if (it.isNotBlank()) remoteCode = it }
+            }
+        } catch (_: Exception) { }
+
         val userDoc = mapOf(
             "uid" to fbUser.uid,
             "displayName" to name,
             "email" to email,
             "photoUrl" to (fbUser.photoUrl?.toString() ?: ""),
             "avatarColorHex" to colorHex,
+            "currencySymbol" to remoteSymbol,
+            "currencyCode" to remoteCode,
             "updatedAt" to System.currentTimeMillis()
         )
         try {
@@ -57,7 +70,9 @@ class FirebaseAuthRepositoryImpl(
             name = name,
             email = email,
             profilePicUrl = fbUser.photoUrl?.toString(),
-            avatarColorHex = colorHex
+            avatarColorHex = colorHex,
+            currencySymbol = remoteSymbol,
+            currencyCode = remoteCode
         )
     }
 
@@ -112,6 +127,22 @@ class FirebaseAuthRepositoryImpl(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    override suspend fun updateUserCurrency(symbol: String, code: String) {
+        val fbUser = auth.currentUser ?: return
+        val firestore = FirebaseFirestore.getInstance()
+        val updates = mutableMapOf<String, Any>(
+            "currencySymbol" to symbol,
+            "updatedAt" to System.currentTimeMillis()
+        )
+        if (code.isNotBlank()) {
+            updates["currencyCode"] = code
+        }
+        try {
+            firestore.collection("users").document(fbUser.uid)
+                .set(updates, SetOptions.merge()).await()
+        } catch (_: Exception) { }
     }
 
     override fun logout() {
