@@ -141,6 +141,7 @@ fun SettingsScreen(
     var showResetDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
+    var isLoggingOut by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val biometricStatus = remember(context) {
@@ -750,16 +751,22 @@ fun SettingsScreen(
     // Logout Confirmation Dialog
     if (showLogoutDialog) {
         FlowCashConfirmDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = "Log Out of FlowCash?",
-            message = "Are you sure you want to log out of your account? You will need to sign in again to access your cash flow dashboard.",
+            onDismissRequest = {
+                if (!isLoggingOut) showLogoutDialog = false
+            },
+            title = if (isLoggingOut) "Signing Out..." else "Log Out of FlowCash?",
+            message = if (isLoggingOut) "Clearing user preferences and local data..." else "Are you sure you want to log out of your account? You will need to sign in again to access your cash flow dashboard.",
             icon = Icons.AutoMirrored.Filled.Logout,
             isDestructive = true,
-            confirmButtonText = "Log Out",
+            isLoading = isLoggingOut,
+            confirmButtonText = if (isLoggingOut) "Signing out..." else "Log Out",
             onConfirm = {
-                showLogoutDialog = false
-                authViewModel.logout()
-                onLogoutClick()
+                isLoggingOut = true
+                authViewModel.logout {
+                    isLoggingOut = false
+                    showLogoutDialog = false
+                    onLogoutClick()
+                }
             }
         )
     }

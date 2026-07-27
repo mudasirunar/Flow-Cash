@@ -166,14 +166,21 @@ fun FlowCashConfirmDialog(
     dismissButtonText: String = "Cancel",
     isDestructive: Boolean = false,
     showStrikeThrough: Boolean = false,
+    isLoading: Boolean = false,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit = onDismissRequest
 ) {
     val buttonColor = if (isDestructive) ExpenseRed else iconTint
 
     Dialog(
-        onDismissRequest = onDismissRequest,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        onDismissRequest = {
+            if (!isLoading) onDismissRequest()
+        },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = !isLoading,
+            dismissOnClickOutside = !isLoading
+        )
     ) {
         Card(
             modifier = Modifier
@@ -203,21 +210,29 @@ fun FlowCashConfirmDialog(
                         .border(1.dp, buttonColor.copy(alpha = 0.3f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = buttonColor.copy(alpha = if (showStrikeThrough) 0.6f else 1f),
-                        modifier = Modifier.size(32.dp)
-                    )
-                    if (showStrikeThrough) {
-                        androidx.compose.foundation.Canvas(modifier = Modifier.size(32.dp)) {
-                            drawLine(
-                                color = buttonColor,
-                                start = androidx.compose.ui.geometry.Offset(x = size.width * 0.15f, y = size.height * 0.15f),
-                                end = androidx.compose.ui.geometry.Offset(x = size.width * 0.85f, y = size.height * 0.85f),
-                                strokeWidth = 3.5.dp.toPx(),
-                                cap = androidx.compose.ui.graphics.StrokeCap.Round
-                            )
+                    if (isLoading) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            color = buttonColor,
+                            strokeWidth = 3.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = title,
+                            tint = buttonColor.copy(alpha = if (showStrikeThrough) 0.6f else 1f),
+                            modifier = Modifier.size(32.dp)
+                        )
+                        if (showStrikeThrough) {
+                            androidx.compose.foundation.Canvas(modifier = Modifier.size(32.dp)) {
+                                drawLine(
+                                    color = buttonColor,
+                                    start = androidx.compose.ui.geometry.Offset(x = size.width * 0.15f, y = size.height * 0.15f),
+                                    end = androidx.compose.ui.geometry.Offset(x = size.width * 0.85f, y = size.height * 0.85f),
+                                    strokeWidth = 3.5.dp.toPx(),
+                                    cap = androidx.compose.ui.graphics.StrokeCap.Round
+                                )
+                            }
                         }
                     }
                 }
@@ -252,19 +267,20 @@ fun FlowCashConfirmDialog(
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
+                        enabled = !isLoading,
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp),
                         shape = RoundedCornerShape(16.dp),
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
-                            MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                            MaterialTheme.colorScheme.outline.copy(alpha = if (isLoading) 0.2f else 0.4f)
                         )
                     ) {
                         Text(
                             dismissButtonText,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (isLoading) 0.4f else 1f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -272,15 +288,26 @@ fun FlowCashConfirmDialog(
 
                     Button(
                         onClick = onConfirm,
+                        enabled = !isLoading,
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = buttonColor,
-                            contentColor = Color.White
+                            contentColor = Color.White,
+                            disabledContainerColor = buttonColor.copy(alpha = 0.5f),
+                            disabledContentColor = Color.White.copy(alpha = 0.7f)
                         )
                     ) {
+                        if (isLoading) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White,
+                                strokeWidth = 2.5.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                        }
                         Text(
                             confirmButtonText,
                             fontWeight = FontWeight.Bold,

@@ -201,17 +201,24 @@ class AuthViewModel @JvmOverloads constructor(
         }
     }
 
-    fun logout() {
-        authRepository.logout()
-        com.mudasir.flowcash.util.GoogleAuthHelper.signOut(getApplication())
+    fun logout(onComplete: () -> Unit = {}) {
+        _uiState.value = _uiState.value.copy(isLoading = true)
         viewModelScope.launch {
-            val db = FlowCashDatabase.getDatabase(getApplication())
-            val repo = TransactionRepository(db.transactionDao(), db.budgetDao(), db.accountDao())
-            repo.clearLocalDatabase()
-            val userPreferences = UserPreferences(getApplication())
-            userPreferences.clearUserPreferences()
+            try {
+                authRepository.logout()
+                com.mudasir.flowcash.util.GoogleAuthHelper.signOut(getApplication())
+                val db = FlowCashDatabase.getDatabase(getApplication())
+                val repo = TransactionRepository(db.transactionDao(), db.budgetDao(), db.accountDao())
+                repo.clearLocalDatabase()
+                val userPreferences = UserPreferences(getApplication())
+                userPreferences.clearUserPreferences()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                _uiState.value = AuthUiState(isLoggedIn = false, isLoading = false, user = null)
+                onComplete()
+            }
         }
-        _uiState.value = AuthUiState(isLoggedIn = false, user = null)
     }
 
     private fun formatAuthErrorMessage(exception: Throwable): String {
