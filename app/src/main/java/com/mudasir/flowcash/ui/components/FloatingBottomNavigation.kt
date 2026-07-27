@@ -2,14 +2,12 @@ package com.mudasir.flowcash.ui.components
 
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -23,30 +21,30 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.R
-import kotlinx.coroutines.delay
 
+@Immutable
 sealed class BottomNavItem(val route: String, val title: String, @DrawableRes val iconRes: Int) {
     data object Dashboard : BottomNavItem("dashboard", "Dashboard", R.drawable.ic_home)
     data object Transactions : BottomNavItem("transactions", "History", R.drawable.ic_history)
@@ -57,43 +55,69 @@ sealed class BottomNavItem(val route: String, val title: String, @DrawableRes va
 @Composable
 fun FloatingBottomNavigation(
     items: List<BottomNavItem>,
-    selectedIndex: Int,
+    pagerState: PagerState,
     onItemSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
-    val isDark = isSystemInDarkTheme()
+    val surfaceColor = MaterialTheme.colorScheme.surface
+    val onSurfaceColor = MaterialTheme.colorScheme.onSurface
+    val outlineColor = MaterialTheme.colorScheme.outline
+    val isDark = surfaceColor.luminance() < 0.5f
 
-    val containerBg = if (isDark) {
-        MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
-    } else {
-        Color.White.copy(alpha = 0.88f)
+    val containerBg = remember(isDark, surfaceColor) {
+        if (isDark) {
+            surfaceColor.copy(alpha = 0.85f)
+        } else {
+            Color.White.copy(alpha = 0.88f)
+        }
     }
 
-    val shadowColor = if (isDark) {
-        Color.Black.copy(alpha = 0.5f)
-    } else {
-        Color.Black.copy(alpha = 0.18f)
+    val shadowColor = remember(isDark) {
+        if (isDark) {
+            Color.Black.copy(alpha = 0.5f)
+        } else {
+            Color.Black.copy(alpha = 0.18f)
+        }
     }
 
-    val containerBorder = if (isDark) {
-        MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-    } else {
-        Color(0xFFE2E8F0)
+    val containerBorder = remember(isDark, outlineColor) {
+        if (isDark) {
+            outlineColor.copy(alpha = 0.3f)
+        } else {
+            Color(0xFFE2E8F0)
+        }
     }
 
-    // Liquid Stretch State on Movement
-    var targetStretchScale by remember { mutableFloatStateOf(1.0f) }
-    LaunchedEffect(selectedIndex) {
-        targetStretchScale = 1.16f
-        delay(130)
-        targetStretchScale = 1.0f
+    // Single source of truth active target page index
+    val targetPage = pagerState.targetPage
+    val currentPage = pagerState.currentPage
+    val pageOffsetFraction = pagerState.currentPageOffsetFraction
+
+    // Exact continuous fractional index (e.g. 0.0 -> 0.4 -> 1.0 -> 2.0 -> 3.0)
+    val continuousIndex = currentPage + pageOffsetFraction
+
+    val animatedContinuousIndex by animateFloatAsState(
+        targetValue = continuousIndex,
+        animationSpec = spring(
+            dampingRatio = 0.65f, // smooth organic liquid glide
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "FloatingNavPillContinuousIndex"
+    )
+
+    // Dynamic liquid stretch during swipe or tab transition
+    val isMoving = pagerState.isScrollInProgress || kotlin.math.abs(continuousIndex - targetPage) > 0.05f
+    val gestureStretch = if (isMoving) {
+        1.0f + (kotlin.math.abs(pageOffsetFraction) * 0.25f)
+    } else {
+        1.0f
     }
 
     val animatedPillStretch by animateFloatAsState(
-        targetValue = targetStretchScale,
+        targetValue = gestureStretch,
         animationSpec = spring(
-            dampingRatio = 0.48f, // elastic liquid rebound physics
+            dampingRatio = 0.55f, // elastic liquid rebound physics
             stiffness = Spring.StiffnessLow
         ),
         label = "PillLiquidStretch"
@@ -121,17 +145,9 @@ fun FloatingBottomNavigation(
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val widthPerItem = maxWidth / items.size
+            val indicatorOffset = widthPerItem * animatedContinuousIndex
 
-            val indicatorOffset by animateDpAsState(
-                targetValue = widthPerItem * selectedIndex,
-                animationSpec = spring(
-                    dampingRatio = 0.52f, // ultra fluid liquid spring glide
-                    stiffness = Spring.StiffnessLow
-                ),
-                label = "FloatingNavPillOffset"
-            )
-
-            // Ultra Liquid Sliding Highlight Pill Indicator with dynamic stretch & snap-back
+            // Ultra Liquid Sliding Highlight Pill Indicator (unified continuous motion without jumps)
             Box(
                 modifier = Modifier
                     .offset(x = indicatorOffset)
@@ -147,12 +163,12 @@ fun FloatingBottomNavigation(
             // Row of Navigation Items
             Row(modifier = Modifier.fillMaxWidth()) {
                 items.forEachIndexed { index, item ->
-                    val isSelected = selectedIndex == index
+                    val isSelected = targetPage == index
 
                     val animatedScale by animateFloatAsState(
                         targetValue = if (isSelected) 1.25f else 1.0f,
                         animationSpec = spring(
-                            dampingRatio = 0.58f, // liquid spring bounce for icon
+                            dampingRatio = 0.65f,
                             stiffness = Spring.StiffnessLow
                         ),
                         label = "IconScaleAnimation"
@@ -167,13 +183,15 @@ fun FloatingBottomNavigation(
                         label = "IconAlphaAnimation"
                     )
 
+                    val interactionSource = remember { MutableInteractionSource() }
+
                     Box(
                         modifier = Modifier
                             .weight(1f)
                             .height(50.dp)
                             .clip(CircleShape)
                             .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
+                                interactionSource = interactionSource,
                                 indication = null
                             ) { onItemSelected(index) },
                         contentAlignment = Alignment.Center
@@ -195,16 +213,18 @@ fun FloatingBottomNavigation(
                                     }
                             )
                             Spacer(modifier = Modifier.height(2.dp))
+                            val textColor = if (isSelected) {
+                                onSurfaceColor
+                            } else {
+                                onSurfaceColor.copy(alpha = 0.60f)
+                            }
+
                             Text(
                                 text = item.title,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontSize = 11.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                    color = if (isSelected) {
-                                        primaryColor
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.65f)
-                                    }
+                                    fontWeight = FontWeight.Bold,
+                                    color = textColor
                                 )
                             )
                         }

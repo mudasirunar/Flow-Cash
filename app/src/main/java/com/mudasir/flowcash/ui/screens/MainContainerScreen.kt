@@ -1,5 +1,7 @@
 package com.mudasir.flowcash.ui.screens
 
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -126,6 +128,7 @@ import com.mudasir.flowcash.util.BiometricAuthHelper
 import com.mudasir.flowcash.ui.viewmodel.AuthViewModel
 import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 import com.mudasir.flowcash.ui.viewmodel.SettingsViewModel
+import kotlinx.coroutines.launch
 import com.mudasir.flowcash.ui.components.BottomNavItem
 import com.mudasir.flowcash.ui.components.FloatingBottomNavigation
 
@@ -144,7 +147,9 @@ fun MainContainerScreen(
         BottomNavItem.Settings
     )
 
-    var selectedIndex by rememberSaveable { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(initialPage = 0, pageCount = { items.size })
+    val selectedIndex = pagerState.currentPage
+    val coroutineScope = rememberCoroutineScope()
     var showAddModal by rememberSaveable { mutableStateOf(false) }
     var showAddAccountScreen by rememberSaveable { mutableStateOf(false) }
 
@@ -200,7 +205,15 @@ fun MainContainerScreen(
     // Back handling to return to Dashboard (main screen) from other tabs before exiting
     if (selectedIndex != 0 && !showAddAccountScreen) {
         BackHandler {
-            selectedIndex = 0
+            coroutineScope.launch {
+                pagerState.animateScrollToPage(
+                    page = 0,
+                    animationSpec = tween(
+                        durationMillis = 300,
+                        easing = FastOutSlowInEasing
+                    )
+                )
+            }
         }
     }
 
@@ -231,39 +244,36 @@ fun MainContainerScreen(
         )
     } else {
         Scaffold(
-            containerColor = Color.Transparent
+            containerColor = Color.Transparent,
+            bottomBar = {
+                FloatingBottomNavigation(
+                    items = items,
+                    pagerState = pagerState,
+                    onItemSelected = { index ->
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(
+                                page = index,
+                                animationSpec = tween(
+                                    durationMillis = 300,
+                                    easing = FastOutSlowInEasing
+                                )
+                            )
+                        }
+                    }
+                )
+            }
         ) { innerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(top = innerPadding.calculateTopPadding())
+                    .padding(innerPadding)
             ) {
-                AnimatedContent(
-                    targetState = selectedIndex,
-                    transitionSpec = {
-                        if (targetState > initialState) {
-                            (slideInHorizontally(
-                                initialOffsetX = { width -> width / 4 },
-                                animationSpec = tween(280, easing = FastOutSlowInEasing)
-                            ) + fadeIn(animationSpec = tween(250))) togetherWith
-                                    (slideOutHorizontally(
-                                        targetOffsetX = { width -> -width / 4 },
-                                        animationSpec = tween(280, easing = FastOutSlowInEasing)
-                                    ) + fadeOut(animationSpec = tween(220)))
-                        } else {
-                            (slideInHorizontally(
-                                initialOffsetX = { width -> -width / 4 },
-                                animationSpec = tween(280, easing = FastOutSlowInEasing)
-                            ) + fadeIn(animationSpec = tween(250))) togetherWith
-                                    (slideOutHorizontally(
-                                        targetOffsetX = { width -> width / 4 },
-                                        animationSpec = tween(280, easing = FastOutSlowInEasing)
-                                    ) + fadeOut(animationSpec = tween(220)))
-                        }
-                    },
-                    label = "BottomTabTransition"
-                ) { targetIndex ->
-                    when (targetIndex) {
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = !showAddAccountScreen
+                ) { page ->
+                    when (page) {
                         0 -> DashboardScreen(
                             dashboardViewModel = dashboardViewModel,
                             settingsViewModel = settingsViewModel,
@@ -335,13 +345,6 @@ fun MainContainerScreen(
                         )
                     }
                 }
-
-                FloatingBottomNavigation(
-                    items = items,
-                    selectedIndex = selectedIndex,
-                    onItemSelected = { selectedIndex = it },
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                )
             }
         }
     }
