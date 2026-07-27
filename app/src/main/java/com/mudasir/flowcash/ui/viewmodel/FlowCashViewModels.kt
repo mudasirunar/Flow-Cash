@@ -294,13 +294,13 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private val _isInitialSelectedAccountLoaded = MutableStateFlow(false)
+    private val _isInitialSelectedAccountLoaded = MutableStateFlow(true)
 
     val accounts: StateFlow<List<AccountEntity>?> = repository.allAccounts
         .map<List<AccountEntity>, List<AccountEntity>?> { it }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = null
         )
 
@@ -311,8 +311,8 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         accs == null || !loaded
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = true
+        started = SharingStarted.Eagerly,
+        initialValue = false
     )
 
     init {

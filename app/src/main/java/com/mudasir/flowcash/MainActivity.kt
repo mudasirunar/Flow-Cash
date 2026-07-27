@@ -59,8 +59,7 @@ class MainActivity : FragmentActivity() {
                     composable(
                         route = "splash",
                         exitTransition = {
-                            scaleOut(targetScale = 1.08f, animationSpec = tween(350, easing = FastOutSlowInEasing)) +
-                                    fadeOut(animationSpec = tween(300))
+                            fadeOut(animationSpec = tween(150))
                         }
                     ) {
                         SplashScreen(
@@ -77,8 +76,7 @@ class MainActivity : FragmentActivity() {
                     composable(
                         route = "login",
                         enterTransition = {
-                            scaleIn(initialScale = 0.92f, animationSpec = tween(350, easing = FastOutSlowInEasing)) +
-                                    fadeIn(animationSpec = tween(350))
+                            fadeIn(animationSpec = tween(150))
                         },
                         exitTransition = {
                             slideOutHorizontally(targetOffsetX = { -it / 3 }, animationSpec = tween(300, easing = FastOutSlowInEasing)) +
@@ -133,13 +131,10 @@ class MainActivity : FragmentActivity() {
                     composable(
                         route = "main",
                         enterTransition = {
-                            slideInVertically(initialOffsetY = { it / 4 }, animationSpec = tween(400, easing = FastOutSlowInEasing)) +
-                                    scaleIn(initialScale = 0.95f, animationSpec = tween(400, easing = FastOutSlowInEasing)) +
-                                    fadeIn(animationSpec = tween(350))
+                            fadeIn(animationSpec = tween(150))
                         },
                         exitTransition = {
-                            scaleOut(targetScale = 0.95f, animationSpec = tween(300)) +
-                                    fadeOut(animationSpec = tween(300))
+                            fadeOut(animationSpec = tween(150))
                         }
                     ) {
                         val dashboardViewModel: DashboardViewModel = viewModel()
