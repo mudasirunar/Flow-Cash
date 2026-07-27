@@ -692,13 +692,20 @@ private fun AccountForm(
         )
         Spacer(modifier = Modifier.height(12.dp))
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+        val cardTemplateLazyState = rememberLazyListState()
+        LaunchedEffect(selectedTemplateIndex) {
+            if (selectedTemplateIndex >= 0 && selectedTemplateIndex < CARD_TEMPLATES.size) {
+                cardTemplateLazyState.animateScrollToItem(selectedTemplateIndex)
+            }
+        }
+
+        LazyRow(
+            state = cardTemplateLazyState,
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            CARD_TEMPLATES.forEachIndexed { index, template ->
+            items(CARD_TEMPLATES.size) { index ->
+                val template = CARD_TEMPLATES[index]
                 val isSelected = selectedTemplateIndex == index
                 Box(
                     modifier = Modifier
@@ -728,17 +735,20 @@ private fun AccountForm(
                                 .clip(RoundedCornerShape(2.dp))
                                 .background(
                                     Brush.linearGradient(
-                                        listOf(Color(0xFFFCD34D), Color(0xFFF59E0B))
+                                        colors = listOf(
+                                            Color.White.copy(alpha = 0.8f),
+                                            Color.White.copy(alpha = 0.4f)
+                                        )
                                     )
                                 )
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = template.name,
                             color = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            lineHeight = 11.sp
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            maxLines = 1
                         )
                     }
                 }
