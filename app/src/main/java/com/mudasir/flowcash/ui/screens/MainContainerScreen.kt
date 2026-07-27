@@ -1,5 +1,9 @@
 package com.mudasir.flowcash.ui.screens
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.annotation.DrawableRes
+import androidx.compose.ui.res.painterResource
+import com.mudasir.flowcash.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -114,11 +118,11 @@ import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 import com.mudasir.flowcash.ui.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
-sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
-    data object Dashboard : BottomNavItem("dashboard", "Dashboard", Icons.Default.Dashboard)
-    data object Transactions : BottomNavItem("transactions", "History", Icons.AutoMirrored.Filled.ReceiptLong)
-    data object Analytics : BottomNavItem("analytics", "Analytics", Icons.Default.Analytics)
-    data object Settings : BottomNavItem("settings", "Settings", Icons.Default.Settings)
+sealed class BottomNavItem(val route: String, val title: String, @DrawableRes val iconRes: Int) {
+    data object Dashboard : BottomNavItem("dashboard", "Dashboard", R.drawable.ic_home)
+    data object Transactions : BottomNavItem("transactions", "History", R.drawable.ic_history)
+    data object Analytics : BottomNavItem("analytics", "Analytics", R.drawable.ic_analytics)
+    data object Settings : BottomNavItem("settings", "Settings", R.drawable.ic_settings)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -229,15 +233,27 @@ fun MainContainerScreen(
                     tonalElevation = 8.dp
                 ) {
                     items.forEachIndexed { index, item ->
+                        val isSelected = selectedIndex == index
                         NavigationBarItem(
-                            icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
+                            icon = {
+                                Icon(
+                                    painter = painterResource(id = item.iconRes),
+                                    contentDescription = item.title,
+                                    tint = androidx.compose.ui.graphics.Color.Unspecified,
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .graphicsLayer {
+                                            alpha = if (isSelected) 1.0f else 0.45f
+                                        }
+                                )
+                            },
                             label = { Text(item.title) },
-                            selected = selectedIndex == index,
+                            selected = isSelected,
                             onClick = { selectedIndex = index },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = MaterialTheme.colorScheme.primary,
                                 selectedTextColor = MaterialTheme.colorScheme.primary,
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
                             )
                         )
                     }

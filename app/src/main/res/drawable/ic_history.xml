@@ -1,0 +1,68 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 1. Background Receipt Paper Sheet (White to Silver Gradient) -->
+    <path
+        android:pathData="M6,3h12c1.1,0 2,0.9 2,2v15l-2,-1.5 -2,1.5 -2,-1.5 -2,1.5 -2,-1.5 -2,1.5V5c0,-1.1 0.9,-2 2,-2z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="6"
+                android:startY="3"
+                android:endX="20"
+                android:endY="22"
+                android:type="linear">
+                <item android:color="#FFFFFFFF" android:offset="0.0" />
+                <item android:color="#FFF1F5F9" android:offset="0.5" />
+                <item android:color="#FFE2E8F0" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 2. Transaction Records Lines -->
+    <!-- Line 1: Income Green -->
+    <path
+        android:pathData="M8.5,7h4v1.5h-4z"
+        android:fillColor="#FF10B981" />
+    <path
+        android:pathData="M13.5,7h2v1.5h-2z"
+        android:fillColor="#FF059669" />
+
+    <!-- Line 2: Expense Coral Red -->
+    <path
+        android:pathData="M8.5,10.5h5v1.5h-5z"
+        android:fillColor="#FFF43F5E" />
+    <path
+        android:pathData="M14.5,10.5h1v1.5h-1z"
+        android:fillColor="#FFE11D48" />
+
+    <!-- Line 3: Balance Indigo -->
+    <path
+        android:pathData="M8.5,14h3v1.5h-3z"
+        android:fillColor="#FF6366F1" />
+
+    <!-- 3. 3D Circular History Clock Badge (Sapphire Blue to Cyan Gradient) -->
+    <path
+        android:pathData="M16.5,16.5c0,-2.48 -2.02,-4.5 -4.5,-4.5s-4.5,2.02 -4.5,4.5 2.02,4.5 4.5,4.5 4.5,-2.02 4.5,-4.5z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="7.5"
+                android:startY="12"
+                android:endX="16.5"
+                android:endY="21"
+                android:type="linear">
+                <item android:color="#FF38BDF8" android:offset="0.0" />
+                <item android:color="#FF3B82F6" android:offset="0.5" />
+                <item android:color="#FF1D4ED8" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 4. Clock Badge White L-Hand -->
+    <path
+        android:pathData="M12,14v2.8h2.3v-1.1H13.1V14H12z"
+        android:fillColor="#FFFFFFFF" />
+</vector>

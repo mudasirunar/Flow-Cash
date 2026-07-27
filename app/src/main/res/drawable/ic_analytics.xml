@@ -1,0 +1,61 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- 1. Top Right Pie Slice (Cyan Blue) -->
+    <path
+        android:pathData="M13,3v8h8c0,-4.42 -3.58,-8 -8,-8z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="13"
+                android:startY="3"
+                android:endX="21"
+                android:endY="11"
+                android:type="linear">
+                <item android:color="#FF38BDF8" android:offset="0.0" />
+                <item android:color="#FF0284C7" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 2. Bottom Half Pie Slice (Emerald Green) -->
+    <path
+        android:pathData="M13,13h8c0,4.42 -3.58,8 -8,8s-8,-3.58 -8,-8h8z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="5"
+                android:startY="13"
+                android:endX="21"
+                android:endY="21"
+                android:type="linear">
+                <item android:color="#FF34D399" android:offset="0.0" />
+                <item android:color="#FF059669" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 3. Popped-out 3D Slice (Top-Left Amber Gold Slice) -->
+    <path
+        android:pathData="M11,11H3c0,-4.42 3.58,-8 8,-8v8z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="3"
+                android:startY="3"
+                android:endX="11"
+                android:endY="11"
+                android:type="linear">
+                <item android:color="#FFFBBF24" android:offset="0.0" />
+                <item android:color="#FFD97706" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- 4. 3D Popped Slice Edge Shadow / Specular Outline -->
+    <path
+        android:pathData="M11,3v8H3"
+        android:strokeColor="#40FFFFFF"
+        android:strokeWidth="0.8" />
+</vector>

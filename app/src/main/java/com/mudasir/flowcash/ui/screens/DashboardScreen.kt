@@ -63,6 +63,8 @@ import com.mudasir.flowcash.ui.components.FlowCashAlertDialog
 import com.mudasir.flowcash.ui.components.FlowCashConfirmDialog
 import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.ui.res.painterResource
+import com.mudasir.flowcash.R
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Savings
@@ -259,17 +261,17 @@ fun DashboardScreen(
                     }
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
+                            .size(42.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                             .clickable { }
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Notifications,
+                            painter = painterResource(id = R.drawable.ic_notification),
                             contentDescription = "Notifications",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = androidx.compose.ui.graphics.Color.Unspecified,
                             modifier = Modifier
-                                .size(18.dp)
+                                .size(28.dp)
                                 .align(Alignment.Center)
                         )
                     }
@@ -552,10 +554,16 @@ fun DashboardScreen(
                     IconButton(
                         onClick = { },
                         modifier = Modifier
+                            .size(42.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_notification),
+                            contentDescription = "Notifications",
+                            tint = androidx.compose.ui.graphics.Color.Unspecified,
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
                 }
 
