@@ -1,12 +1,19 @@
 package com.mudasir.flowcash.ui.screens
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.rounded.SettingsSuggest
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.DarkMode
+import com.mudasir.flowcash.ui.theme.PrimaryIndigo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -795,30 +802,52 @@ fun SettingsScreen(
     }
 }
 
+private data class ThemeTabItem(
+    val mode: ThemeMode,
+    val label: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val color: androidx.compose.ui.graphics.Color
+)
+
 @Composable
 private fun SlidingPillThemeSelector(
     selectedMode: ThemeMode,
     onModeSelected: (ThemeMode) -> Unit
 ) {
-    val modes = listOf(
-        ThemeMode.SYSTEM to "System",
-        ThemeMode.LIGHT to "Light",
-        ThemeMode.DARK to "Dark"
+    val items = remember {
+        listOf(
+            ThemeTabItem(ThemeMode.SYSTEM, "System", Icons.Rounded.SettingsSuggest, PrimaryIndigo),
+            ThemeTabItem(ThemeMode.LIGHT, "Light", Icons.Rounded.LightMode, androidx.compose.ui.graphics.Color(0xFFF59E0B)),
+            ThemeTabItem(ThemeMode.DARK, "Dark", Icons.Rounded.DarkMode, androidx.compose.ui.graphics.Color(0xFF38BDF8))
+        )
+    }
+    val selectedIndex = items.indexOfFirst { it.mode == selectedMode }.coerceAtLeast(0)
+    val activeItem = items[selectedIndex]
+
+    val activeColor by animateColorAsState(
+        targetValue = activeItem.color,
+        animationSpec = spring(
+            dampingRatio = 0.8f,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "ThemeColorAnimation"
     )
-    val selectedIndex = modes.indexOfFirst { it.first == selectedMode }.coerceAtLeast(0)
 
     BoxWithConstraints(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
             .padding(4.dp)
     ) {
-        val widthPerItem = maxWidth / modes.size
+        val widthPerItem = maxWidth / items.size
         val indicatorOffset by animateDpAsState(
             targetValue = widthPerItem * selectedIndex,
-            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+            animationSpec = spring(
+                dampingRatio = 0.68f,
+                stiffness = Spring.StiffnessLow
+            ),
             label = "SlidingPillAnimation"
         )
 
@@ -828,41 +857,36 @@ private fun SlidingPillThemeSelector(
                 .offset(x = indicatorOffset)
                 .width(widthPerItem)
                 .height(44.dp)
-                .shadow(4.dp, RoundedCornerShape(12.dp), ambientColor = PrimaryIndigo, spotColor = PrimaryIndigo)
+                .border(1.5.dp, activeColor.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
                 .clip(RoundedCornerShape(12.dp))
-                .background(PrimaryIndigo)
+                .background(activeColor.copy(alpha = 0.18f))
         )
 
-        // Row of Text Labels
+        // Row of Icons and Labels
         Row(modifier = Modifier.fillMaxWidth()) {
-            modes.forEach { (mode, label) ->
-                val isSelected = selectedMode == mode
+            items.forEach { item ->
+                val isSelected = selectedMode == item.mode
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(44.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .clickable { onModeSelected(mode) },
+                        .clickable { onModeSelected(item.mode) },
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        val icon = when (mode) {
-                            ThemeMode.SYSTEM -> Icons.Default.SettingsSuggest
-                            ThemeMode.LIGHT -> Icons.Default.LightMode
-                            ThemeMode.DARK -> Icons.Default.DarkMode
-                        }
                         Icon(
-                            imageVector = icon,
-                            contentDescription = label,
-                            tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
+                            imageVector = item.icon,
+                            contentDescription = item.label,
+                            tint = if (isSelected) item.color else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = label,
+                            text = item.label,
                             style = MaterialTheme.typography.bodyMedium.copy(
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                             )
                         )
                     }
