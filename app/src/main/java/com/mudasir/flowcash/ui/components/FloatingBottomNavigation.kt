@@ -1,9 +1,11 @@
 package com.mudasir.flowcash.ui.components
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -124,6 +126,17 @@ fun FloatingBottomNavigation(
         label = "PillLiquidStretch"
     )
 
+    // Dynamic alpha for Pill: Darker/Rich when fully selected, lighter when sliding/swiping
+    val idleAlpha = if (isDark) 0.35f else 0.25f
+    val slidingAlpha = if (isDark) 0.22f else 0.15f
+
+    val targetPillAlpha = if (isMoving) slidingAlpha else idleAlpha
+    val animatedPillColor by animateColorAsState(
+        targetValue = primaryColor.copy(alpha = targetPillAlpha),
+        animationSpec = tween(durationMillis = 200),
+        label = "PillColorAlphaAnimation"
+    )
+
     Box(
         modifier = modifier
             .widthIn(max = 620.dp)
@@ -149,7 +162,7 @@ fun FloatingBottomNavigation(
             val widthPerItem = maxWidth / items.size
             val indicatorOffset = widthPerItem * animatedContinuousIndex
 
-            // Ultra Liquid Sliding Highlight Pill Indicator (unified continuous motion without jumps)
+            // Ultra Liquid Sliding Highlight Pill Indicator
             Box(
                 modifier = Modifier
                     .offset(x = indicatorOffset)
@@ -159,7 +172,7 @@ fun FloatingBottomNavigation(
                         scaleX = animatedPillStretch
                     }
                     .clip(CircleShape)
-                    .background(primaryColor.copy(alpha = if (isDark) 0.22f else 0.15f))
+                    .background(animatedPillColor)
             )
 
             // Row of Navigation Items

@@ -40,37 +40,43 @@ fun TransactionFab(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    // 1. Elastic Liquid Squish Physics on Press
-    val squishX by animateFloatAsState(
-        targetValue = if (isPressed) 1.12f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "SquishX"
+    // Fast spring response for responsive tap feedback
+    val fastSpringSpec = spring<Float>(
+        dampingRatio = Spring.DampingRatioMediumBouncy,
+        stiffness = Spring.StiffnessHigh
     )
-    val squishY by animateFloatAsState(
-        targetValue = if (isPressed) 0.88f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "SquishY"
+
+    // 1. Press Squeeze Scale
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.84f else 1.0f,
+        animationSpec = fastSpringSpec,
+        label = "PressSqueezeScale"
     )
 
     // 2. Corner Morphing
     val cornerRadius by animateDpAsState(
-        targetValue = if (isPressed) 24.dp else 18.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        targetValue = if (isPressed) 28.dp else 18.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessHigh
+        ),
         label = "CornerMorph"
     )
 
-    // 3. Icon Rotation on Show / Hide
+    // 3. Icon Rotation & Scale
     val iconRotation by animateFloatAsState(
         targetValue = if (visible) 0f else -90f,
         animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
         label = "IconRotation"
     )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.80f else 1.0f,
+        animationSpec = fastSpringSpec,
+        label = "IconScale"
+    )
+
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     AnimatedVisibility(
         visible = visible,
@@ -86,17 +92,21 @@ fun TransactionFab(
         Box(
             modifier = Modifier
                 .graphicsLayer {
-                    scaleX = squishX
-                    scaleY = squishY
+                    scaleX = pressScale
+                    scaleY = pressScale
                 }
                 .size(56.dp)
                 .clip(RoundedCornerShape(cornerRadius))
-                // Glass-tinted background (matches app surface variant & primary tint for high visibility)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
-                // 1.5.dp Solid Primary Border
+                // Translucent fill matching chips & dashboard tiles
+                .background(
+                    primaryColor.copy(
+                        alpha = if (isPressed) 0.38f else 0.20f
+                    )
+                )
+                // Crisp 1.5dp Solid Primary Border
                 .border(
                     width = 1.5.dp,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = primaryColor,
                     shape = RoundedCornerShape(cornerRadius)
                 )
                 .clickable(
@@ -109,11 +119,13 @@ fun TransactionFab(
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = "Add Transaction",
-                tint = MaterialTheme.colorScheme.primary, // Primary color matching border
+                tint = primaryColor, // Crisp primary icon that pops
                 modifier = Modifier
                     .size(26.dp)
                     .graphicsLayer {
                         rotationZ = iconRotation
+                        scaleX = iconScale
+                        scaleY = iconScale
                     }
             )
         }
