@@ -104,6 +104,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -589,14 +590,24 @@ fun DashboardScreen(
                         pageCount = { Int.MAX_VALUE }
                     )
 
+                    val globalIncome = remember(allTransactions) {
+                        allTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                    }
+                    val globalExpense = remember(allTransactions) {
+                        allTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+                    }
+                    val globalNetBalance = remember(globalIncome, globalExpense) { globalIncome - globalExpense }
+
                     // Two-way sync: Pager -> ViewModel selection
-                    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress, listSize, accounts) {
-                        if (listSize > 0 && !pagerState.isScrollInProgress) {
-                            val currentMappedIndex = pagerState.currentPage % listSize
-                            val currentSelectedAccount = pagerList[currentMappedIndex]
-                            if (currentSelectedAccount is AccountEntity?) {
-                                if (selectedAccount != currentSelectedAccount) {
-                                    dashboardViewModel.setSelectedAccount(currentSelectedAccount)
+                    LaunchedEffect(pagerState, listSize, accounts) {
+                        snapshotFlow { pagerState.settledPage }.collect { page ->
+                            if (listSize > 0) {
+                                val currentMappedIndex = page % listSize
+                                val currentSelectedAccount = pagerList.getOrNull(currentMappedIndex)
+                                if (currentSelectedAccount is AccountEntity?) {
+                                    if (selectedAccount != currentSelectedAccount) {
+                                        dashboardViewModel.setSelectedAccount(currentSelectedAccount)
+                                    }
                                 }
                             }
                         }
@@ -658,9 +669,9 @@ fun DashboardScreen(
                             when (item) {
                                 null -> {
                                     OverviewCard(
-                                        netBalance = netBalance,
-                                        totalIncome = totalIncome,
-                                        totalExpense = totalExpense,
+                                        netBalance = globalNetBalance,
+                                        totalIncome = globalIncome,
+                                        totalExpense = globalExpense,
                                         currencySymbol = currencySymbol,
                                         isDataVisible = isDataVisible,
                                         onToggleVisibility = handleToggleVisibility,
