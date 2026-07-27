@@ -63,3 +63,37 @@ val AvatarColors = listOf(
     Color(0xFF2563EB),
     Color(0xFF9333EA)
 )
+
+// Card Gradient Template Data Class & Helper
+data class CardTemplate(
+    val name: String,
+    val startHex: String,
+    val endHex: String
+)
+
+fun parseHexColor(hex: String): Color {
+    return try {
+        Color(android.graphics.Color.parseColor(hex))
+    } catch (e: Exception) {
+        PrimaryIndigo
+    }
+}
+
+// 15 Modern Premium Card Color Gradient Presets
+val CARD_TEMPLATES = listOf(
+    CardTemplate("Midnight Indigo", "#1E1B4B", "#4F46E5"),
+    CardTemplate("Emerald Banking", "#064E3B", "#059669"),
+    CardTemplate("Rose Gold", "#831843", "#E11D48"),
+    CardTemplate("Obsidian Black", "#0F172A", "#1E293B"),
+    CardTemplate("Royal Purple", "#4C1D95", "#7C3AED"),
+    CardTemplate("Sapphire Blue", "#1E3A5F", "#2563EB"),
+    CardTemplate("Sunset Orange", "#7C2D12", "#EA580C"),
+    CardTemplate("Silver Platinum", "#374151", "#6B7280"),
+    CardTemplate("Cyber Teal", "#042F2E", "#14B8A6"),
+    CardTemplate("Crimson Ruby", "#450A0A", "#DC2626"),
+    CardTemplate("Champagne Gold", "#451A03", "#D97706"),
+    CardTemplate("Deep Space Violet", "#3B0764", "#9333EA"),
+    CardTemplate("Titanium Steel", "#18181B", "#71717A"),
+    CardTemplate("Electric Coral", "#7C2D12", "#F97316"),
+    CardTemplate("Ocean Turquoise", "#0C4A6E", "#0284C7")
+)

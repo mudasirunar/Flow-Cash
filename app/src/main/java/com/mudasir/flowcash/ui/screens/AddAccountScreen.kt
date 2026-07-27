@@ -78,13 +78,9 @@ import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.data.local.entity.AccountEntity
 import com.mudasir.flowcash.ui.theme.ExpenseRed
 import com.mudasir.flowcash.ui.theme.PrimaryIndigo
-
-// Premade card template data
-data class CardTemplate(
-    val name: String,
-    val startHex: String,
-    val endHex: String
-)
+import com.mudasir.flowcash.ui.theme.CardTemplate
+import com.mudasir.flowcash.ui.theme.CARD_TEMPLATES
+import com.mudasir.flowcash.ui.theme.parseHexColor
 
 val CARD_NETWORKS = listOf(
     "VISA",
@@ -96,17 +92,6 @@ val CARD_NETWORKS = listOf(
     "RUPAY"
 )
 
-val CARD_TEMPLATES = listOf(
-    CardTemplate("Midnight Indigo", "#1E1B4B", "#4F46E5"),
-    CardTemplate("Emerald Banking", "#064E3B", "#059669"),
-    CardTemplate("Rose Gold", "#831843", "#E11D48"),
-    CardTemplate("Obsidian Black", "#0F172A", "#1E293B"),
-    CardTemplate("Royal Purple", "#4C1D95", "#7C3AED"),
-    CardTemplate("Sapphire Blue", "#1E3A5F", "#2563EB"),
-    CardTemplate("Sunset Orange", "#7C2D12", "#EA580C"),
-    CardTemplate("Silver Platinum", "#374151", "#6B7280")
-)
-
 val ACCOUNT_TYPES = listOf(
     "CARD" to Icons.Default.CreditCard,
     "CASH_WALLET" to Icons.Default.Wallet,
@@ -115,14 +100,6 @@ val ACCOUNT_TYPES = listOf(
     "SAVINGS" to Icons.Default.Savings,
     "OTHER" to Icons.Default.Widgets
 )
-
-fun parseHexColor(hex: String): Color {
-    return try {
-        Color(android.graphics.Color.parseColor(hex))
-    } catch (e: Exception) {
-        PrimaryIndigo
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
