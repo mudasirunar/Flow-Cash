@@ -13,6 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -66,6 +70,7 @@ fun FlowCashAlertDialog(
     ) {
         Card(
             modifier = Modifier
+                .widthIn(max = 440.dp)
                 .fillMaxWidth(0.92f)
                 .clip(RoundedCornerShape(28.dp))
                 .border(
@@ -80,6 +85,7 @@ fun FlowCashAlertDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -184,6 +190,7 @@ fun FlowCashConfirmDialog(
     ) {
         Card(
             modifier = Modifier
+                .widthIn(max = 440.dp)
                 .fillMaxWidth(0.92f)
                 .clip(RoundedCornerShape(28.dp))
                 .border(
@@ -198,6 +205,7 @@ fun FlowCashConfirmDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -343,6 +351,7 @@ fun FlowCashInputDialog(
     ) {
         Card(
             modifier = Modifier
+                .widthIn(max = 440.dp)
                 .fillMaxWidth(0.92f)
                 .clip(RoundedCornerShape(28.dp))
                 .border(
@@ -357,6 +366,7 @@ fun FlowCashInputDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -484,6 +494,7 @@ fun FlowCashSelectionDialog(
     ) {
         Card(
             modifier = Modifier
+                .widthIn(max = 440.dp)
                 .fillMaxWidth(0.92f)
                 .clip(RoundedCornerShape(28.dp))
                 .border(
