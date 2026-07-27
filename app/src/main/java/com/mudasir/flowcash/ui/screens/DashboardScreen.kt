@@ -308,16 +308,20 @@ fun DashboardScreen(
                         }
                         val globalNetBalance = remember(globalIncome, globalExpense) { globalIncome - globalExpense }
 
-                        // Sync active pager settled page directly to ViewModel selection without race conditions
+                        // Sync user swipe -> ViewModel selection
                         LaunchedEffect(pagerState, listSize, accounts) {
-                            snapshotFlow { pagerState.settledPage }.collect { page ->
-                                if (listSize > 0 && !pagerState.isScrollInProgress) {
+                            snapshotFlow { pagerState.isScrollInProgress to pagerState.settledPage }.collect { (scrolling, page) ->
+                                if (listSize > 0 && !scrolling) {
                                     val currentMappedIndex = page % listSize
                                     val currentSelectedAccount = pagerList.getOrNull(currentMappedIndex)
-                                    if (currentSelectedAccount is AccountEntity?) {
-                                        if (selectedAccount != currentSelectedAccount) {
+                                    // Only update on an actual AccountEntity — null = All Accounts, String = ADD_NEW; both handled separately
+                                    if (currentSelectedAccount is AccountEntity) {
+                                        if (selectedAccount?.id != currentSelectedAccount.id) {
                                             dashboardViewModel.setSelectedAccount(currentSelectedAccount)
                                         }
+                                    } else if (currentSelectedAccount == null && selectedAccount != null && scrolling.not()) {
+                                        // User swiped explicitly to All Accounts
+                                        dashboardViewModel.setSelectedAccount(null)
                                     }
                                 }
                             }
@@ -592,42 +596,50 @@ fun DashboardScreen(
                 }
                 val globalNetBalance = remember(globalIncome, globalExpense) { globalIncome - globalExpense }
 
-                // Two-way sync: Pager -> ViewModel selection
+                // Sync user swipe -> ViewModel selection
                 LaunchedEffect(pagerState, listSize, accounts) {
-                    snapshotFlow { pagerState.settledPage }.collect { page ->
-                        if (listSize > 0) {
+                    snapshotFlow { pagerState.isScrollInProgress to pagerState.settledPage }.collect { (scrolling, page) ->
+                        if (listSize > 0 && !scrolling) {
                             val currentMappedIndex = page % listSize
                             val currentSelectedAccount = pagerList.getOrNull(currentMappedIndex)
-                            if (currentSelectedAccount is AccountEntity?) {
-                                if (selectedAccount != currentSelectedAccount) {
+                            // Only update on an actual AccountEntity — null = All Accounts, String = ADD_NEW; both handled separately
+                            if (currentSelectedAccount is AccountEntity) {
+                                if (selectedAccount?.id != currentSelectedAccount.id) {
                                     dashboardViewModel.setSelectedAccount(currentSelectedAccount)
                                 }
+                            } else if (currentSelectedAccount == null && selectedAccount != null && scrolling.not()) {
+                                // User swiped explicitly to All Accounts
+                                dashboardViewModel.setSelectedAccount(null)
                             }
                         }
                     }
                 }
 
-                // Two-way sync: ViewModel selection -> Pager
+                // Sync ViewModel selection -> Pager (e.g. after initial DataStore load)
                 var isFirstPageSync by remember { mutableStateOf(true) }
                 LaunchedEffect(selectedAccount, listSize, accounts) {
                     if (listSize > 0) {
                         val currentSelected = selectedAccount
-                        val targetIndex = if (currentSelected == null) 0 else accounts.indexOfFirst { it.id == currentSelected.id } + 1
-                        if (targetIndex >= 0) {
-                            val currentMappedIndex = pagerState.currentPage % listSize
-                            if (currentMappedIndex != targetIndex) {
-                                val diff1 = targetIndex - currentMappedIndex
-                                val diff2 = diff1 + listSize
-                                val diff3 = diff1 - listSize
-                                val offset = listOf(diff1, diff2, diff3).minByOrNull { kotlin.math.abs(it) } ?: diff1
-                                if (isFirstPageSync) {
-                                    pagerState.scrollToPage(pagerState.currentPage + offset)
-                                } else {
-                                    pagerState.animateScrollToPage(pagerState.currentPage + offset)
-                                }
-                            }
-                            isFirstPageSync = false
+                        val targetIndex = if (currentSelected == null) {
+                            0
+                        } else {
+                            val idx = accounts.indexOfFirst { it.id == currentSelected.id }
+                            if (idx < 0) return@LaunchedEffect // Accounts not loaded yet — skip, avoids spurious scroll to All Accounts
+                            idx + 1
                         }
+                        val currentMappedIndex = pagerState.currentPage % listSize
+                        if (currentMappedIndex != targetIndex) {
+                            val diff1 = targetIndex - currentMappedIndex
+                            val diff2 = diff1 + listSize
+                            val diff3 = diff1 - listSize
+                            val offset = listOf(diff1, diff2, diff3).minByOrNull { kotlin.math.abs(it) } ?: diff1
+                            if (isFirstPageSync) {
+                                pagerState.scrollToPage(pagerState.currentPage + offset)
+                            } else {
+                                pagerState.animateScrollToPage(pagerState.currentPage + offset)
+                            }
+                        }
+                        isFirstPageSync = false
                     }
                 }
 
