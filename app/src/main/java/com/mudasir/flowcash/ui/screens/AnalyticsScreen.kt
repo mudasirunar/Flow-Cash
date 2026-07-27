@@ -67,6 +67,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.data.local.entity.AccountEntity
@@ -85,7 +86,8 @@ import java.util.Calendar
 @Composable
 fun AnalyticsScreen(
     dashboardViewModel: DashboardViewModel,
-    currencySymbol: String = "$"
+    currencySymbol: String = "$",
+    bottomPadding: Dp = 100.dp
 ) {
     val allTransactions by dashboardViewModel.transactions.collectAsState()
     val accounts by dashboardViewModel.accounts.collectAsState()
@@ -626,7 +628,7 @@ fun AnalyticsScreen(
                 }
             }
         }
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(bottomPadding))
     }
 
     // Set Budget Limit Modal Dialog

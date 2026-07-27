@@ -115,6 +115,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.data.local.entity.AccountEntity
@@ -147,7 +148,8 @@ fun DashboardScreen(
     onEditAccountClick: (AccountEntity) -> Unit = {},
     onTransactionClick: (TransactionItem) -> Unit = {},
     onTransactionLongClick: (TransactionItem) -> Unit = {},
-    settingsViewModel: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    settingsViewModel: SettingsViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    bottomPadding: Dp = 100.dp
 ) {
     val context = LocalContext.current
     val biometricsEnabled by settingsViewModel.biometricsEnabled.collectAsState()
@@ -807,6 +809,9 @@ fun DashboardScreen(
                     )
                     Spacer(modifier = Modifier.height(10.dp))
                 }
+            }
+            item {
+                Spacer(modifier = Modifier.height(bottomPadding))
             }
         }
     }

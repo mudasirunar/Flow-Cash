@@ -58,6 +58,8 @@ import com.mudasir.flowcash.ui.components.SearchBar
 import com.mudasir.flowcash.ui.components.TransactionFab
 import com.mudasir.flowcash.ui.viewmodel.DashboardViewModel
 
+import androidx.compose.ui.unit.Dp
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionsScreen(
@@ -65,7 +67,8 @@ fun TransactionsScreen(
     currencySymbol: String = "$",
     onAddTransactionClick: () -> Unit,
     onTransactionClick: (TransactionItem) -> Unit = {},
-    onTransactionLongClick: (TransactionItem) -> Unit = {}
+    onTransactionLongClick: (TransactionItem) -> Unit = {},
+    bottomPadding: Dp = 100.dp
 ) {
     val allTransactions by dashboardViewModel.transactions.collectAsState()
     val searchQuery by dashboardViewModel.searchQuery.collectAsState()
@@ -280,6 +283,9 @@ fun TransactionsScreen(
                             onLongClick = { onTransactionLongClick(tx) }
                         )
                     }
+                    item {
+                        Spacer(modifier = Modifier.height(bottomPadding))
+                    }
                 }
             }
         }
@@ -290,7 +296,7 @@ fun TransactionsScreen(
             onClick = onAddTransactionClick,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(20.dp)
+                .padding(bottom = bottomPadding, end = 20.dp)
         )
     }
 }

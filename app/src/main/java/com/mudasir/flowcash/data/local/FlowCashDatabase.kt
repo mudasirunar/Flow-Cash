@@ -38,19 +38,6 @@ abstract class FlowCashDatabase : RoomDatabase() {
                     "flowcash_database"
                 )
                     .fallbackToDestructiveMigration()
-                    .addCallback(object : Callback() {
-                        override fun onCreate(db: SupportSQLiteDatabase) {
-                            super.onCreate(db)
-                            INSTANCE?.let { database ->
-                                CoroutineScope(Dispatchers.IO).launch {
-                                    // Seed default budget limits
-                                    database.budgetDao().insertBudget(BudgetEntity("Food", 300.0))
-                                    database.budgetDao().insertBudget(BudgetEntity("Shopping", 200.0))
-                                    database.budgetDao().insertBudget(BudgetEntity("Bills", 500.0))
-                                }
-                            }
-                        }
-                    })
                     .build()
                 INSTANCE = instance
                 instance

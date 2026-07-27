@@ -78,6 +78,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.BuildConfig
@@ -118,7 +119,8 @@ fun SettingsScreen(
     dashboardViewModel: DashboardViewModel? = null,
     userName: String = "User",
     userEmail: String = "user@example.com",
-    onLogoutClick: () -> Unit
+    onLogoutClick: () -> Unit,
+    bottomPadding: Dp = 100.dp
 ) {
     val themeMode by settingsViewModel.themeMode.collectAsState()
     val currency by settingsViewModel.currency.collectAsState()
@@ -672,7 +674,7 @@ fun SettingsScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(bottomPadding))
     }
 
     if (showBiometricEnableDialog) {

@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
 import com.mudasir.flowcash.R
@@ -150,6 +152,12 @@ fun MainContainerScreen(
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { items.size })
     val selectedIndex = pagerState.currentPage
     val coroutineScope = rememberCoroutineScope()
+
+    var navBarHeightPx by remember { mutableIntStateOf(0) }
+    val localDensity = LocalDensity.current
+    val navBarHeightDp = remember(navBarHeightPx, localDensity) {
+        with(localDensity) { navBarHeightPx.toDp() }
+    }
     var showAddModal by rememberSaveable { mutableStateOf(false) }
     var showAddAccountScreen by rememberSaveable { mutableStateOf(false) }
 
@@ -244,30 +252,17 @@ fun MainContainerScreen(
         )
     } else {
         Scaffold(
-            containerColor = Color.Transparent,
-            bottomBar = {
-                FloatingBottomNavigation(
-                    items = items,
-                    pagerState = pagerState,
-                    onItemSelected = { index ->
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(
-                                page = index,
-                                animationSpec = tween(
-                                    durationMillis = 300,
-                                    easing = FastOutSlowInEasing
-                                )
-                            )
-                        }
-                    }
-                )
-            }
+            containerColor = Color.Transparent
         ) { innerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(top = innerPadding.calculateTopPadding())
             ) {
+                val calculatedBottomPadding = remember(navBarHeightDp) {
+                    if (navBarHeightDp > 0.dp) navBarHeightDp + 16.dp else 100.dp
+                }
+
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.fillMaxSize(),
@@ -315,7 +310,8 @@ fun MainContainerScreen(
                                 }
                             },
                             onTransactionClick = { tx -> selectedTransactionForDetails = tx },
-                            onTransactionLongClick = { tx -> selectedTransactionForMenu = tx }
+                            onTransactionLongClick = { tx -> selectedTransactionForMenu = tx },
+                            bottomPadding = calculatedBottomPadding
                         )
                         1 -> TransactionsScreen(
                             dashboardViewModel = dashboardViewModel,
@@ -329,11 +325,13 @@ fun MainContainerScreen(
                                 }
                             },
                             onTransactionClick = { tx -> selectedTransactionForDetails = tx },
-                            onTransactionLongClick = { tx -> selectedTransactionForMenu = tx }
+                            onTransactionLongClick = { tx -> selectedTransactionForMenu = tx },
+                            bottomPadding = calculatedBottomPadding
                         )
                         2 -> AnalyticsScreen(
                             dashboardViewModel = dashboardViewModel,
-                            currencySymbol = currency
+                            currencySymbol = currency,
+                            bottomPadding = calculatedBottomPadding
                         )
                         3 -> SettingsScreen(
                             settingsViewModel = settingsViewModel,
@@ -341,10 +339,34 @@ fun MainContainerScreen(
                             dashboardViewModel = dashboardViewModel,
                             userName = userName,
                             userEmail = userEmail,
-                            onLogoutClick = onLogoutClick
+                            onLogoutClick = onLogoutClick,
+                            bottomPadding = calculatedBottomPadding
                         )
                     }
                 }
+
+                FloatingBottomNavigation(
+                    items = items,
+                    pagerState = pagerState,
+                    onItemSelected = { index ->
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(
+                                page = index,
+                                animationSpec = tween(
+                                    durationMillis = 300,
+                                    easing = FastOutSlowInEasing
+                                )
+                            )
+                        }
+                    },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .onGloballyPositioned { coordinates ->
+                            if (coordinates.size.height != navBarHeightPx) {
+                                navBarHeightPx = coordinates.size.height
+                            }
+                        }
+                )
             }
         }
     }
