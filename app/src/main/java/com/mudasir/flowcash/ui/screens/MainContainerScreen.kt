@@ -19,12 +19,15 @@ import androidx.compose.ui.res.painterResource
 import com.mudasir.flowcash.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -165,6 +168,7 @@ fun MainContainerScreen(
 
     val authState by authViewModel.uiState.collectAsState()
     val currency by settingsViewModel.currency.collectAsState()
+    val isDashboardLoading by dashboardViewModel.isLoading.collectAsState()
     val accountsState by dashboardViewModel.accounts.collectAsState()
     val accounts = remember(accountsState) { accountsState ?: emptyList() }
     var showAccountRequiredDialog by rememberSaveable { mutableStateOf(false) }
@@ -346,34 +350,39 @@ fun MainContainerScreen(
                     }
                 }
 
-                FloatingBottomNavigation(
-                    items = items,
-                    pagerState = pagerState,
-                    onItemSelected = { index ->
-                        coroutineScope.launch {
-                            pagerState.animateScrollToPage(
-                                page = index,
-                                animationSpec = tween(
-                                    durationMillis = 300,
-                                    easing = FastOutSlowInEasing
+                AnimatedVisibility(
+                    visible = !isDashboardLoading,
+                    enter = fadeIn(animationSpec = tween(300)) + slideInVertically(initialOffsetY = { it / 2 }),
+                    exit = fadeOut(animationSpec = tween(200)) + slideOutVertically(targetOffsetY = { it / 2 }),
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                ) {
+                    FloatingBottomNavigation(
+                        items = items,
+                        pagerState = pagerState,
+                        onItemSelected = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(
+                                    page = index,
+                                    animationSpec = tween(
+                                        durationMillis = 300,
+                                        easing = FastOutSlowInEasing
+                                    )
                                 )
-                            )
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .onGloballyPositioned { coordinates ->
-                            if (coordinates.size.height != navBarHeightPx) {
-                                navBarHeightPx = coordinates.size.height
                             }
-                        }
-                )
+                        },
+                        modifier = Modifier
+                            .onGloballyPositioned { coordinates ->
+                                if (coordinates.size.height != navBarHeightPx) {
+                                    navBarHeightPx = coordinates.size.height
+                                }
+                            }
+                    )
+                }
             }
         }
     }
 
     val welcomeEvent = authState.welcomeEvent
-    val isDashboardLoading by dashboardViewModel.isLoading.collectAsState()
     FloatingWelcomeBanner(
         isVisible = welcomeEvent != null && !isDashboardLoading,
         userName = welcomeEvent?.name ?: userName,
