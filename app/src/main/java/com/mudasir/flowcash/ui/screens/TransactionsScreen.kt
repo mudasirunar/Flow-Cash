@@ -327,7 +327,7 @@ fun TransactionsScreen(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    contentPadding = PaddingValues(bottom = if (isImeOpen) imeBottomPadding + 20.dp else bottomPadding)
+                    contentPadding = PaddingValues(bottom = if (isImeOpen) imeBottomPadding + 24.dp else bottomPadding + 72.dp)
                 ) {
                     items(
                         items = transactions,
@@ -346,12 +346,16 @@ fun TransactionsScreen(
         }
 
         // Floating Action Button
+        val fabBottomPadding = remember(bottomPadding) {
+            (bottomPadding - 16.dp).coerceAtLeast(70.dp)
+        }
+
         TransactionFab(
             visible = isFabVisible && !isImeOpen,
             onClick = onAddTransactionClick,
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(bottom = bottomPadding, end = 20.dp)
+                .padding(bottom = fabBottomPadding, end = 20.dp)
         )
     }
 }

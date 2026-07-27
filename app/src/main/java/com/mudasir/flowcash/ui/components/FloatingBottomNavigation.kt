@@ -126,7 +126,7 @@ fun FloatingBottomNavigation(
 
     Box(
         modifier = modifier
-            .widthIn(max = 480.dp)
+            .widthIn(max = 620.dp)
             .fillMaxWidth()
             .navigationBarsPadding()
             .padding(horizontal = 18.dp, vertical = 12.dp)

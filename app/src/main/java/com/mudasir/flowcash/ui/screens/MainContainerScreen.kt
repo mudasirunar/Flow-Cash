@@ -82,6 +82,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Wallet
@@ -431,6 +432,7 @@ fun MainContainerScreen(
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
             onDismissRequest = { showAddModal = false },
+            modifier = Modifier.widthIn(max = 560.dp),
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp
@@ -469,6 +471,7 @@ fun MainContainerScreen(
         ) {
             Card(
                 modifier = Modifier
+                    .widthIn(max = 440.dp)
                     .fillMaxWidth(0.92f)
                     .clip(RoundedCornerShape(28.dp))
                     .border(
@@ -483,6 +486,7 @@ fun MainContainerScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -619,6 +623,7 @@ fun MainContainerScreen(
         val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(
             onDismissRequest = { selectedTransactionForMenu = null },
+            modifier = Modifier.widthIn(max = 560.dp),
             sheetState = sheetState,
             containerColor = MaterialTheme.colorScheme.surface,
             tonalElevation = 8.dp
@@ -626,6 +631,7 @@ fun MainContainerScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(horizontal = 24.dp, vertical = 12.dp)
             ) {
                 Text(
