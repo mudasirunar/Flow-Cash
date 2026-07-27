@@ -11,11 +11,13 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.runtime.key
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -209,19 +211,6 @@ fun DashboardScreen(
         accounts.find { it.id == deletingAccountId }
     }
 
-    val activeAccountTransactions = remember(allTransactions, selectedAccount) {
-        allTransactions.filter {
-            selectedAccount == null || it.accountName.equals(selectedAccount?.name, ignoreCase = true)
-        }
-    }
-    val totalIncome = remember(activeAccountTransactions) {
-        activeAccountTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-    }
-    val totalExpense = remember(activeAccountTransactions) {
-        activeAccountTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-    }
-    val netBalance = remember(totalIncome, totalExpense) { totalIncome - totalExpense }
-
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -289,7 +278,7 @@ fun DashboardScreen(
                     } else {
                         val pagerList = remember(accounts) { (listOf(null) + accounts + listOf("ADD_NEW")) as List<Any?> }
                         val listSize = pagerList.size
-                        val initialPage = remember(listSize) {
+                        val initialPage = remember(listSize, selectedAccount) {
                             val currentSelected = selectedAccount
                             val targetIndex = if (currentSelected == null) 0 else (accounts.indexOfFirst { it.id == currentSelected.id }.coerceAtLeast(0) + 1)
                             5000 * listSize + targetIndex
@@ -299,14 +288,24 @@ fun DashboardScreen(
                             pageCount = { Int.MAX_VALUE }
                         )
 
+                        val globalIncome = remember(allTransactions) {
+                            allTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                        }
+                        val globalExpense = remember(allTransactions) {
+                            allTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+                        }
+                        val globalNetBalance = remember(globalIncome, globalExpense) { globalIncome - globalExpense }
+
                         // Two-way sync: Pager -> ViewModel selection
-                        LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress, listSize, accounts) {
-                            if (listSize > 0 && !pagerState.isScrollInProgress) {
-                                val currentMappedIndex = pagerState.currentPage % listSize
-                                val currentSelectedAccount = pagerList[currentMappedIndex]
-                                if (currentSelectedAccount is AccountEntity?) {
-                                    if (selectedAccount != currentSelectedAccount) {
-                                        dashboardViewModel.setSelectedAccount(currentSelectedAccount)
+                        LaunchedEffect(pagerState, listSize, accounts) {
+                            snapshotFlow { pagerState.settledPage }.collect { page ->
+                                if (listSize > 0) {
+                                    val currentMappedIndex = page % listSize
+                                    val currentSelectedAccount = pagerList.getOrNull(currentMappedIndex)
+                                    if (currentSelectedAccount is AccountEntity?) {
+                                        if (selectedAccount != currentSelectedAccount) {
+                                            dashboardViewModel.setSelectedAccount(currentSelectedAccount)
+                                        }
                                     }
                                 }
                             }
@@ -336,76 +335,83 @@ fun DashboardScreen(
                             }
                         }
 
-                        HorizontalPager(
-                            state = pagerState,
-                            contentPadding = PaddingValues(horizontal = 48.dp),
-                            pageSpacing = 16.dp,
-                            beyondViewportPageCount = 1,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(205.dp)
-                        ) { page ->
-                            val mappedIndex = page % listSize
-                            val item = pagerList[mappedIndex]
-                            val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val responsivePadding = remember(maxWidth) {
+                                (maxWidth * 0.18f).coerceIn(44.dp, 120.dp)
+                            }
 
-                            Box(
+                            HorizontalPager(
+                                state = pagerState,
+                                contentPadding = PaddingValues(horizontal = responsivePadding),
+                                pageSpacing = 16.dp,
+                                beyondViewportPageCount = 1,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .graphicsLayer {
-                                        val pageOffsetAbs = pageOffset.absoluteValue
-                                        val scale = 0.86f + (1f - 0.86f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
-                                        val alphaVal = 0.6f + (1f - 0.6f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+                                    .height(205.dp)
+                            ) { page ->
+                                val mappedIndex = page % listSize
+                                val item = pagerList[mappedIndex]
+                                val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
 
-                                        scaleX = scale
-                                        scaleY = scale
-                                        this.alpha = alphaVal
-                                        rotationY = -22f * pageOffset.coerceIn(-1f, 1f)
-                                        cameraDistance = 12f * density
-                                    }
-                                    .zIndex(1f - pageOffset.absoluteValue)
-                            ) {
-                                when (item) {
-                                    null -> {
-                                        OverviewCard(
-                                            netBalance = netBalance,
-                                            totalIncome = totalIncome,
-                                            totalExpense = totalExpense,
-                                            currencySymbol = currencySymbol,
-                                            isDataVisible = isDataVisible,
-                                            onToggleVisibility = handleToggleVisibility,
-                                            onClick = { showBottomSheetSelector = true }
-                                        )
-                                    }
-                                    "ADD_NEW" -> {
-                                        AddCardPlaceholder(onClick = onAddAccountClick)
-                                    }
-                                    is AccountEntity -> {
-                                        val account = item
-                                        val accountTransactions = remember(allTransactions, account) {
-                                            allTransactions.filter {
-                                                it.accountName.equals(account.name, ignoreCase = true)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .graphicsLayer {
+                                            val pageOffsetAbs = pageOffset.absoluteValue
+                                            val scale = 0.86f + (1f - 0.86f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+                                            val alphaVal = 0.6f + (1f - 0.6f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+
+                                            scaleX = scale
+                                            scaleY = scale
+                                            this.alpha = alphaVal
+                                            rotationY = -22f * pageOffset.coerceIn(-1f, 1f)
+                                            cameraDistance = 12f * density
+                                        }
+                                        .zIndex(1f - pageOffset.absoluteValue),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    when (item) {
+                                        null -> {
+                                            OverviewCard(
+                                                netBalance = globalNetBalance,
+                                                totalIncome = globalIncome,
+                                                totalExpense = globalExpense,
+                                                currencySymbol = currencySymbol,
+                                                isDataVisible = isDataVisible,
+                                                onToggleVisibility = handleToggleVisibility,
+                                                onClick = { showBottomSheetSelector = true }
+                                            )
+                                        }
+                                        "ADD_NEW" -> {
+                                            AddCardPlaceholder(onClick = onAddAccountClick)
+                                        }
+                                        is AccountEntity -> {
+                                            val account = item
+                                            val accountTransactions = remember(allTransactions, account) {
+                                                allTransactions.filter {
+                                                    it.accountName.equals(account.name, ignoreCase = true)
+                                                }
                                             }
-                                        }
-                                        val accIncome = remember(accountTransactions) {
-                                            accountTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-                                        }
-                                        val accExpense = remember(accountTransactions) {
-                                            accountTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-                                        }
-                                        val accBalance = accIncome - accExpense
+                                            val accIncome = remember(accountTransactions) {
+                                                accountTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                                            }
+                                            val accExpense = remember(accountTransactions) {
+                                                accountTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+                                            }
+                                            val accBalance = accIncome - accExpense
 
-                                        SelectedAccountCard(
-                                            account = account,
-                                            netBalance = accBalance,
-                                            totalIncome = accIncome,
-                                            totalExpense = accExpense,
-                                            currencySymbol = currencySymbol,
-                                            isDataVisible = isDataVisible,
-                                            onToggleVisibility = handleToggleVisibility,
-                                            onClick = { showBottomSheetSelector = true },
-                                            onEditClick = { onEditAccountClick(account) }
-                                        )
+                                            SelectedAccountCard(
+                                                account = account,
+                                                netBalance = accBalance,
+                                                totalIncome = accIncome,
+                                                totalExpense = accExpense,
+                                                currencySymbol = currencySymbol,
+                                                isDataVisible = isDataVisible,
+                                                onToggleVisibility = handleToggleVisibility,
+                                                onClick = { showBottomSheetSelector = true },
+                                                onEditClick = { onEditAccountClick(account) }
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -580,7 +586,7 @@ fun DashboardScreen(
                 } else {
                     val pagerList = remember(accounts) { (listOf(null) + accounts + listOf("ADD_NEW")) as List<Any?> }
                     val listSize = pagerList.size
-                    val initialPage = remember(listSize) {
+                    val initialPage = remember(listSize, selectedAccount) {
                         val currentSelected = selectedAccount
                         val targetIndex = if (currentSelected == null) 0 else (accounts.indexOfFirst { it.id == currentSelected.id }.coerceAtLeast(0) + 1)
                         5000 * listSize + targetIndex
@@ -640,80 +646,81 @@ fun DashboardScreen(
                     HorizontalPager(
                         state = pagerState,
                         contentPadding = PaddingValues(horizontal = 48.dp),
-                        pageSpacing = 16.dp,
-                        beyondViewportPageCount = 1,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(215.dp)
-                    ) { page ->
-                        val mappedIndex = page % listSize
-                        val item = pagerList[mappedIndex]
-                        val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
-
-                        Box(
+                            pageSpacing = 16.dp,
+                            beyondViewportPageCount = 1,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .graphicsLayer {
-                                    val pageOffsetAbs = pageOffset.absoluteValue
-                                    val scale = 0.86f + (1f - 0.86f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
-                                    val alphaVal = 0.6f + (1f - 0.6f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+                                .height(215.dp)
+                        ) { page ->
+                            val mappedIndex = page % listSize
+                            val item = pagerList[mappedIndex]
+                            val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
 
-                                    scaleX = scale
-                                    scaleY = scale
-                                    this.alpha = alphaVal
-                                    rotationY = -22f * pageOffset.coerceIn(-1f, 1f)
-                                    cameraDistance = 12f * density
-                                }
-                                .zIndex(1f - pageOffset.absoluteValue)
-                        ) {
-                            when (item) {
-                                null -> {
-                                    OverviewCard(
-                                        netBalance = globalNetBalance,
-                                        totalIncome = globalIncome,
-                                        totalExpense = globalExpense,
-                                        currencySymbol = currencySymbol,
-                                        isDataVisible = isDataVisible,
-                                        onToggleVisibility = handleToggleVisibility,
-                                        onClick = { showBottomSheetSelector = true }
-                                    )
-                                }
-                                "ADD_NEW" -> {
-                                    AddCardPlaceholder(onClick = onAddAccountClick)
-                                }
-                                is AccountEntity -> {
-                                    val account = item
-                                    val accountTransactions = remember(allTransactions, account) {
-                                        allTransactions.filter {
-                                            it.accountName.equals(account.name, ignoreCase = true)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .graphicsLayer {
+                                        val pageOffsetAbs = pageOffset.absoluteValue
+                                        val scale = 0.86f + (1f - 0.86f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+                                        val alphaVal = 0.6f + (1f - 0.6f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+
+                                        scaleX = scale
+                                        scaleY = scale
+                                        this.alpha = alphaVal
+                                        rotationY = -22f * pageOffset.coerceIn(-1f, 1f)
+                                        cameraDistance = 12f * density
+                                    }
+                                    .zIndex(1f - pageOffset.absoluteValue),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                when (item) {
+                                    null -> {
+                                        OverviewCard(
+                                            netBalance = globalNetBalance,
+                                            totalIncome = globalIncome,
+                                            totalExpense = globalExpense,
+                                            currencySymbol = currencySymbol,
+                                            isDataVisible = isDataVisible,
+                                            onToggleVisibility = handleToggleVisibility,
+                                            onClick = { showBottomSheetSelector = true }
+                                        )
+                                    }
+                                    "ADD_NEW" -> {
+                                        AddCardPlaceholder(onClick = onAddAccountClick)
+                                    }
+                                    is AccountEntity -> {
+                                        val account = item
+                                        val accountTransactions = remember(allTransactions, account) {
+                                            allTransactions.filter {
+                                                it.accountName.equals(account.name, ignoreCase = true)
+                                            }
                                         }
-                                    }
-                                    val accIncome = remember(accountTransactions) {
-                                        accountTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-                                    }
-                                    val accExpense = remember(accountTransactions) {
-                                        accountTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-                                    }
-                                    val accBalance = accIncome - accExpense
+                                        val accIncome = remember(accountTransactions) {
+                                            accountTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                                        }
+                                        val accExpense = remember(accountTransactions) {
+                                            accountTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+                                        }
+                                        val accBalance = accIncome - accExpense
 
-                                    SelectedAccountCard(
-                                        account = account,
-                                        netBalance = accBalance,
-                                        totalIncome = accIncome,
-                                        totalExpense = accExpense,
-                                        currencySymbol = currencySymbol,
-                                        isDataVisible = isDataVisible,
-                                        onToggleVisibility = handleToggleVisibility,
-                                        onClick = { showBottomSheetSelector = true },
-                                        onEditClick = { onEditAccountClick(account) }
-                                    )
+                                        SelectedAccountCard(
+                                            account = account,
+                                            netBalance = accBalance,
+                                            totalIncome = accIncome,
+                                            totalExpense = accExpense,
+                                            currencySymbol = currencySymbol,
+                                            isDataVisible = isDataVisible,
+                                            onToggleVisibility = handleToggleVisibility,
+                                            onClick = { showBottomSheetSelector = true },
+                                            onEditClick = { onEditAccountClick(account) }
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
-                }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
             }
 
             item {

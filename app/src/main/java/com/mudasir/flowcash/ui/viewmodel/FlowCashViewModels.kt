@@ -294,7 +294,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    private val _isInitialSelectedAccountLoaded = MutableStateFlow(true)
+    private val _isInitialSelectedAccountLoaded = MutableStateFlow(false)
 
     val accounts: StateFlow<List<AccountEntity>?> = repository.allAccounts
         .map<List<AccountEntity>, List<AccountEntity>?> { it }
