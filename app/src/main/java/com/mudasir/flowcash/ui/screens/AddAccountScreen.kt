@@ -50,6 +50,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
@@ -507,6 +508,7 @@ private fun AccountForm(
                 FilterChip(
                     selected = selectedType == type,
                     onClick = { onSelectedTypeChange(type) },
+                    shape = RoundedCornerShape(12.dp),
                     label = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(icon, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -514,9 +516,19 @@ private fun AccountForm(
                             Text(label, fontSize = 11.sp)
                         }
                     },
+                    border = FilterChipDefaults.filterChipBorder(
+                        enabled = true,
+                        selected = selectedType == type,
+                        borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                        selectedBorderColor = MaterialTheme.colorScheme.primary,
+                        borderWidth = 1.dp,
+                        selectedBorderWidth = 1.5.dp
+                    ),
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MaterialTheme.colorScheme.primary,
-                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                        selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
+                        labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        selectedLabelColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
             }
@@ -532,7 +544,12 @@ private fun AccountForm(
                     label = { Text("Custom Type") },
                     placeholder = { Text("e.g. Crypto, Gift Card") },
                     singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -546,7 +563,12 @@ private fun AccountForm(
             onValueChange = onAccountNameChange,
             label = { Text("Account / Wallet Name") },
             singleLine = true,
+            shape = RoundedCornerShape(18.dp),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            ),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -558,11 +580,16 @@ private fun AccountForm(
             onValueChange = onHolderNameChange,
             label = { Text("Holder Name (display on card)") },
             singleLine = true,
+            shape = RoundedCornerShape(18.dp),
             keyboardOptions = KeyboardOptions(
                 imeAction = if (isCardType) ImeAction.Next else ImeAction.Done
             ),
             keyboardActions = KeyboardActions(
                 onDone = { focusManager.clearFocus() }
+            ),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             ),
             modifier = Modifier.fillMaxWidth()
         )
@@ -595,17 +622,24 @@ private fun AccountForm(
                         val isSel = selectedNetwork == net
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(
-                                    if (isSel) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                    if (isSel) MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                )
+                                .border(
+                                    width = if (isSel) 1.5.dp else 1.dp,
+                                    color = if (isSel) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                                    shape = RoundedCornerShape(12.dp)
                                 )
                                 .clickable { onSelectedNetworkChange(net) }
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
                         ) {
                             Text(
                                 text = net,
-                                color = if (isSel) Color.White else MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
                                 fontSize = 12.sp
                             )
                         }
@@ -622,6 +656,7 @@ private fun AccountForm(
                         label = { Text("Card Number") },
                         placeholder = { Text("1234567890123456") },
                         singleLine = true,
+                        shape = RoundedCornerShape(18.dp),
                         isError = isCardNumberError,
                         supportingText = {
                             if (isCardNumberError) {
@@ -634,6 +669,10 @@ private fun AccountForm(
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Number,
                             imeAction = ImeAction.Next
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         ),
                         modifier = Modifier
                             .weight(1.5f)
@@ -651,6 +690,7 @@ private fun AccountForm(
                         label = { Text("Expiry") },
                         placeholder = { Text("MMYY") },
                         singleLine = true,
+                        shape = RoundedCornerShape(18.dp),
                         isError = isExpiryError,
                         supportingText = {
                             if (isExpiryError) {
@@ -666,6 +706,10 @@ private fun AccountForm(
                         ),
                         keyboardActions = KeyboardActions(
                             onDone = { focusManager.clearFocus() }
+                        ),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         ),
                         modifier = Modifier
                             .weight(1f)

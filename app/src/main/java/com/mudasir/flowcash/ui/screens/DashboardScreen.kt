@@ -432,24 +432,63 @@ fun DashboardScreen(
                             FilterChip(
                                 selected = selectedFilter == null,
                                 onClick = { dashboardViewModel.setFilter(null) },
-                                label = { Text("All", fontSize = 11.sp) },
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)
+                                label = { Text("All", fontSize = 11.sp, fontWeight = if (selectedFilter == null) FontWeight.Bold else FontWeight.Normal) },
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selectedFilter == null,
+                                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                                    selectedBorderColor = MaterialTheme.colorScheme.primary,
+                                    borderWidth = 1.dp,
+                                    selectedBorderWidth = 1.5.dp
+                                ),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                                )
                             )
                         }
                         item {
                             FilterChip(
                                 selected = selectedFilter == TransactionType.INCOME,
                                 onClick = { dashboardViewModel.setFilter(TransactionType.INCOME) },
-                                label = { Text("Income", fontSize = 11.sp) },
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen, selectedLabelColor = Color.White)
+                                label = { Text("Income", fontSize = 11.sp, fontWeight = if (selectedFilter == TransactionType.INCOME) FontWeight.Bold else FontWeight.Normal) },
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selectedFilter == TransactionType.INCOME,
+                                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                                    selectedBorderColor = IncomeGreen,
+                                    borderWidth = 1.dp,
+                                    selectedBorderWidth = 1.5.dp
+                                ),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    selectedContainerColor = IncomeGreen.copy(alpha = 0.38f),
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                                )
                             )
                         }
                         item {
                             FilterChip(
                                 selected = selectedFilter == TransactionType.EXPENSE,
                                 onClick = { dashboardViewModel.setFilter(TransactionType.EXPENSE) },
-                                label = { Text("Expenses", fontSize = 11.sp) },
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed, selectedLabelColor = Color.White)
+                                label = { Text("Expenses", fontSize = 11.sp, fontWeight = if (selectedFilter == TransactionType.EXPENSE) FontWeight.Bold else FontWeight.Normal) },
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selectedFilter == TransactionType.EXPENSE,
+                                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                                    selectedBorderColor = ExpenseRed,
+                                    borderWidth = 1.dp,
+                                    selectedBorderWidth = 1.5.dp
+                                ),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    selectedContainerColor = ExpenseRed.copy(alpha = 0.38f),
+                                    labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                                )
                             )
                         }
                     }
@@ -737,24 +776,63 @@ fun DashboardScreen(
                         FilterChip(
                             selected = selectedFilter == null,
                             onClick = { dashboardViewModel.setFilter(null) },
-                            label = { Text("All") },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)
+                            label = { Text("All", fontWeight = if (selectedFilter == null) FontWeight.Bold else FontWeight.Normal) },
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = selectedFilter == null,
+                                borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                                selectedBorderColor = MaterialTheme.colorScheme.primary,
+                                borderWidth = 1.dp,
+                                selectedBorderWidth = 1.5.dp
+                            ),
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.38f),
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                            )
                         )
                     }
                     item {
                         FilterChip(
                             selected = selectedFilter == TransactionType.INCOME,
                             onClick = { dashboardViewModel.setFilter(TransactionType.INCOME) },
-                            label = { Text("Income") },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen, selectedLabelColor = Color.White)
+                            label = { Text("Income", fontWeight = if (selectedFilter == TransactionType.INCOME) FontWeight.Bold else FontWeight.Normal) },
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = selectedFilter == TransactionType.INCOME,
+                                borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                                selectedBorderColor = IncomeGreen,
+                                borderWidth = 1.dp,
+                                selectedBorderWidth = 1.5.dp
+                            ),
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                selectedContainerColor = IncomeGreen.copy(alpha = 0.38f),
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                            )
                         )
                     }
                     item {
                         FilterChip(
                             selected = selectedFilter == TransactionType.EXPENSE,
                             onClick = { dashboardViewModel.setFilter(TransactionType.EXPENSE) },
-                            label = { Text("Expenses") },
-                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed, selectedLabelColor = Color.White)
+                            label = { Text("Expenses", fontWeight = if (selectedFilter == TransactionType.EXPENSE) FontWeight.Bold else FontWeight.Normal) },
+                            border = FilterChipDefaults.filterChipBorder(
+                                enabled = true,
+                                selected = selectedFilter == TransactionType.EXPENSE,
+                                borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                                selectedBorderColor = ExpenseRed,
+                                borderWidth = 1.dp,
+                                selectedBorderWidth = 1.5.dp
+                            ),
+                            colors = FilterChipDefaults.filterChipColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                selectedContainerColor = ExpenseRed.copy(alpha = 0.38f),
+                                labelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSurface
+                            )
                         )
                     }
                 }
@@ -1068,7 +1146,7 @@ fun DashboardScreen(
     }
 }
 
-// --- Modern Luxury AccountSelectorRow ---
+// --- AccountSelectorRow ---
 @Composable
 private fun AccountSelectorRow(
     label: String,
@@ -1465,7 +1543,7 @@ private fun SelectedAccountCard(
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(Color.White.copy(alpha = 0.15f))
                                     .padding(horizontal = 8.dp, vertical = 4.dp)
                             )
@@ -1670,7 +1748,7 @@ fun TransactionRowItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-            .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+            .border(1.dp, if (isIncome) IncomeGreen.copy(alpha = 0.45f) else ExpenseRed.copy(alpha = 0.45f), RoundedCornerShape(16.dp))
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick

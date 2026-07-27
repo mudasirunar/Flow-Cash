@@ -839,13 +839,13 @@ fun CategoryProgressRow(
     val cardBg = when {
         isOverBudget -> ExpenseRed.copy(alpha = 0.08f)
         isUnderBudget -> IncomeGreen.copy(alpha = 0.08f)
-        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
     }
 
     val cardBorder = when {
         isOverBudget -> ExpenseRed.copy(alpha = 0.4f)
         isUnderBudget -> IncomeGreen.copy(alpha = 0.4f)
-        else -> MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+        else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
     }
 
     val accentColor = when {
