@@ -129,6 +129,7 @@ import com.mudasir.flowcash.ui.components.UserProfileAvatar
 import com.mudasir.flowcash.ui.theme.ExpenseRed
 import com.mudasir.flowcash.ui.theme.IncomeGreen
 import com.mudasir.flowcash.ui.theme.PrimaryIndigo
+import com.mudasir.flowcash.ui.theme.PrimaryIndigoLight
 import com.mudasir.flowcash.ui.theme.parseHexColor
 import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.platform.LocalContext
@@ -816,71 +817,174 @@ fun DashboardScreen(
         val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(
             onDismissRequest = { showBottomSheetSelector = false },
+            modifier = Modifier.widthIn(max = 560.dp),
             sheetState = sheetState,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
             containerColor = MaterialTheme.colorScheme.surface,
-            tonalElevation = 8.dp
+            tonalElevation = 12.dp
         ) {
-            Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
-                Text("Select Active Wallet", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface))
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Choose a wallet to filter dashboard metrics.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(20.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(bottom = 36.dp)
+            ) {
+                    // Drag indicator / Header Banner
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountBalanceWallet,
+                                    contentDescription = "Wallets",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text(
+                                    "Select Active Wallet",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 19.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                )
+                                Text(
+                                    "Switch cards or view master overview",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                )
+                            }
+                        }
 
-                AccountSelectorRow(
-                    label = "All Accounts",
-                    icon = Icons.Default.Wallet,
-                    isSelected = selectedAccount == null,
-                    isAllAccounts = true,
-                    onClick = {
-                        dashboardViewModel.setSelectedAccount(null)
-                        showBottomSheetSelector = false
+                        // Count Badge Pill
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "${accounts.size + 1} Total",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
                     }
-                )
-                Spacer(modifier = Modifier.height(4.dp))
 
-                accounts.forEach { account ->
-                    val accountIcon = if (account.accountType == "CARD") {
-                        Icons.Default.CreditCard
-                    } else {
-                        getAccountTypeIcon(account.accountType)
-                    }
+                    Spacer(modifier = Modifier.height(20.dp))
 
+                    // All Accounts Card Option
                     AccountSelectorRow(
-                        label = account.name,
-                        icon = accountIcon,
-                        isSelected = account.id == selectedAccount?.id,
+                        label = "All Accounts",
+                        subtitle = "Master overview across all cards & wallets",
+                        icon = Icons.Default.AccountBalance,
+                        accountTypeTag = "OVERVIEW",
+                        isSelected = selectedAccount == null,
+                        isAllAccounts = true,
                         onClick = {
-                            dashboardViewModel.setSelectedAccount(account)
+                            dashboardViewModel.setSelectedAccount(null)
                             showBottomSheetSelector = false
-                        },
-                        onDelete = {
-                            showBottomSheetSelector = false
-                            deletingAccountId = account.id // Triggers Confirmation Dialog
                         }
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                        .clickable {
-                            showBottomSheetSelector = false
-                            onAddAccountClick()
+                    // Individual Accounts List
+                    accounts.forEach { account ->
+                        val accountIcon = if (account.accountType == "CARD") {
+                            Icons.Default.CreditCard
+                        } else {
+                            getAccountTypeIcon(account.accountType)
                         }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add", tint = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Add New Card / Wallet", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary))
+
+                        AccountSelectorRow(
+                            label = account.name,
+                            subtitle = "${account.network} • **** ${if (account.cardNumber.length >= 4) account.cardNumber.takeLast(4) else "0000"}",
+                            icon = accountIcon,
+                            accountTypeTag = account.accountType,
+                            cardColors = listOf(parseHexColor(account.cardColorStart), parseHexColor(account.cardColorEnd)),
+                            isSelected = account.id == selectedAccount?.id,
+                            onClick = {
+                                dashboardViewModel.setSelectedAccount(account)
+                                showBottomSheetSelector = false
+                            },
+                            onDelete = {
+                                showBottomSheetSelector = false
+                                deletingAccountId = account.id // Triggers Confirmation Dialog
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    // Add New Card / Wallet Action Button
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                            .border(
+                                1.5.dp,
+                                Brush.linearGradient(
+                                    listOf(
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    )
+                                ),
+                                RoundedCornerShape(18.dp)
+                            )
+                            .clickable {
+                                showBottomSheetSelector = false
+                                onAddAccountClick()
+                            }
+                            .padding(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            "Add New Card or Wallet",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        )
+                    }
                 }
-            }
         }
     }
 
@@ -942,23 +1046,49 @@ fun DashboardScreen(
     }
 }
 
-// --- Updated AccountSelectorRow ---
+// --- Modern Luxury AccountSelectorRow ---
 @Composable
 private fun AccountSelectorRow(
     label: String,
+    subtitle: String? = null,
     icon: ImageVector,
+    accountTypeTag: String = "",
+    cardColors: List<Color> = emptyList(),
     isSelected: Boolean,
     isAllAccounts: Boolean = false,
     onClick: () -> Unit,
     onDelete: () -> Unit = {}
 ) {
+    val bgModifier = if (isSelected) {
+        Modifier
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            .border(
+                1.5.dp,
+                Brush.linearGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                        MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                    )
+                ),
+                RoundedCornerShape(20.dp)
+            )
+    } else {
+        Modifier
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+            .border(
+                1.dp,
+                MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                RoundedCornerShape(20.dp)
+            )
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else Color.Transparent)
+            .clip(RoundedCornerShape(20.dp))
+            .then(bgModifier)
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -966,42 +1096,120 @@ private fun AccountSelectorRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.width(14.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+            // Gradient Icon Badge Container
+            val badgeBrush = remember(cardColors, isSelected) {
+                if (cardColors.size >= 2) {
+                    Brush.linearGradient(cardColors)
+                } else {
+                    Brush.linearGradient(
+                        listOf(
+                            PrimaryIndigo,
+                            PrimaryIndigoLight
+                        )
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(badgeBrush),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
                 )
-            )
+            }
+
+            Spacer(modifier = Modifier.width(14.dp))
+
+            Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+
+                    if (accountTypeTag.isNotBlank()) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                )
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = accountTypeTag.replace("_", " "),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+                }
+
+                subtitle?.let { sub ->
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = sub,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                        )
+                    )
+                }
+            }
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (isSelected) {
-                Icon(
-                    imageVector = Icons.Default.Check,
-                    contentDescription = "Selected",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(end = 8.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(30.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = "Selected",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
 
             // Show Delete action for custom accounts
             if (!isAllAccounts) {
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(32.dp)
+                if (isSelected) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(ExpenseRed.copy(alpha = 0.12f))
+                        .clickable(onClick = onDelete),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete Account",
-                        tint = ExpenseRed.copy(alpha = 0.8f),
-                        modifier = Modifier.size(18.dp)
+                        tint = ExpenseRed,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
