@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.ui.platform.LocalConfiguration
 import android.content.res.Configuration
@@ -216,6 +217,15 @@ fun DashboardScreen(
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
+    val portraitLazyListState = rememberLazyListState()
+    val landscapeLazyListState = rememberLazyListState()
+
+    // Automatically reset/scroll Recent Activity list to top position when card or filter selection changes
+    LaunchedEffect(selectedAccount, selectedFilter) {
+        portraitLazyListState.animateScrollToItem(0)
+        landscapeLazyListState.animateScrollToItem(0)
+    }
+
     if (isLoading) {
         DashboardSkeleton(isLandscape = isLandscape)
     } else if (isLandscape) {
@@ -282,16 +292,12 @@ fun DashboardScreen(
                         val listSize = pagerList.size
                         val initialPage = remember(listSize, selectedAccount) {
                             val currentSelected = selectedAccount
-                            if (currentSelected == null) {
-                                0
-                            } else {
-                                val foundIndex = accounts.indexOfFirst { it.id == currentSelected.id }
-                                if (foundIndex >= 0) (foundIndex + 1).coerceIn(0, listSize - 1) else 0
-                            }
+                            val targetIndex = if (currentSelected == null) 0 else (accounts.indexOfFirst { it.id == currentSelected.id }.coerceAtLeast(0) + 1)
+                            5000 * listSize + targetIndex
                         }
                         val pagerState = rememberPagerState(
                             initialPage = initialPage,
-                            pageCount = { listSize }
+                            pageCount = { Int.MAX_VALUE }
                         )
 
                         val globalIncome = remember(allTransactions) {
@@ -303,12 +309,15 @@ fun DashboardScreen(
                         val globalNetBalance = remember(globalIncome, globalExpense) { globalIncome - globalExpense }
 
                         // Sync active pager settled page directly to ViewModel selection without race conditions
-                        LaunchedEffect(pagerState, accounts) {
+                        LaunchedEffect(pagerState, listSize, accounts) {
                             snapshotFlow { pagerState.settledPage }.collect { page ->
-                                if (!pagerState.isScrollInProgress) {
-                                    val currentSelected = if (page <= 0 || page > accounts.size) null else accounts.getOrNull(page - 1)
-                                    if (dashboardViewModel.selectedAccount.value != currentSelected) {
-                                        dashboardViewModel.setSelectedAccount(currentSelected)
+                                if (listSize > 0 && !pagerState.isScrollInProgress) {
+                                    val currentMappedIndex = page % listSize
+                                    val currentSelectedAccount = pagerList.getOrNull(currentMappedIndex)
+                                    if (currentSelectedAccount is AccountEntity?) {
+                                        if (selectedAccount != currentSelectedAccount) {
+                                            dashboardViewModel.setSelectedAccount(currentSelectedAccount)
+                                        }
                                     }
                                 }
                             }
@@ -328,7 +337,8 @@ fun DashboardScreen(
                                     .fillMaxWidth()
                                     .height(205.dp)
                             ) { page ->
-                                val item = pagerList.getOrNull(page)
+                                val mappedIndex = page % listSize
+                                val item = pagerList[mappedIndex]
                                 val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
 
                                 Box(
@@ -492,7 +502,11 @@ fun DashboardScreen(
                         }
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LazyColumn(
+                        state = landscapeLazyListState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         items(items = transactions, key = { it.id }) { tx ->
                             TransactionRowItem(
                                 transaction = tx,
@@ -507,307 +521,303 @@ fun DashboardScreen(
             }
         }
     } else {
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+                .padding(horizontal = 20.dp)
         ) {
-            item {
-                Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-                // Top Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        UserProfileAvatar(
-                            name = userName,
-                            email = userEmail,
-                            profilePicUrl = profilePicUrl,
-                            avatarColorHex = avatarColorHex,
-                            size = 46.dp
-                        )
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            AnimatedThunderTagline(textStyle = MaterialTheme.typography.bodyMedium)
-                            Text(userName, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
-                        }
-                    }
-
-                    IconButton(
-                        onClick = { },
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_notification),
-                            contentDescription = "Notifications",
-                            tint = androidx.compose.ui.graphics.Color.Unspecified,
-                            modifier = Modifier.size(28.dp)
-                        )
+            // Top Header (Anchored)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    UserProfileAvatar(
+                        name = userName,
+                        email = userEmail,
+                        profilePicUrl = profilePicUrl,
+                        avatarColorHex = avatarColorHex,
+                        size = 46.dp
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        AnimatedThunderTagline(textStyle = MaterialTheme.typography.bodyMedium)
+                        Text(userName, style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
                     }
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-
-            item {
-                // === Adaptive Dashboard Card Carousel ===
-                if (accounts.isEmpty()) {
-                    EmptyAccountsCard(onAddAccountClick = onAddAccountClick)
-                } else {
-                    val pagerList = remember(accounts) { (listOf(null) + accounts + listOf("ADD_NEW")) as List<Any?> }
-                    val listSize = pagerList.size
-                    val initialPage = remember(listSize, selectedAccount) {
-                        val currentSelected = selectedAccount
-                        val targetIndex = if (currentSelected == null) 0 else (accounts.indexOfFirst { it.id == currentSelected.id }.coerceAtLeast(0) + 1)
-                        5000 * listSize + targetIndex
-                    }
-                    val pagerState = rememberPagerState(
-                        initialPage = initialPage,
-                        pageCount = { Int.MAX_VALUE }
-                    )
-
-                    val globalIncome = remember(allTransactions) {
-                        allTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-                    }
-                    val globalExpense = remember(allTransactions) {
-                        allTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-                    }
-                    val globalNetBalance = remember(globalIncome, globalExpense) { globalIncome - globalExpense }
-
-                    // Two-way sync: Pager -> ViewModel selection
-                    LaunchedEffect(pagerState, listSize, accounts) {
-                        snapshotFlow { pagerState.settledPage }.collect { page ->
-                            if (listSize > 0) {
-                                val currentMappedIndex = page % listSize
-                                val currentSelectedAccount = pagerList.getOrNull(currentMappedIndex)
-                                if (currentSelectedAccount is AccountEntity?) {
-                                    if (selectedAccount != currentSelectedAccount) {
-                                        dashboardViewModel.setSelectedAccount(currentSelectedAccount)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Two-way sync: ViewModel selection -> Pager
-                    var isFirstPageSync by remember { mutableStateOf(true) }
-                    LaunchedEffect(selectedAccount, listSize, accounts) {
-                        if (listSize > 0) {
-                            val currentSelected = selectedAccount
-                            val targetIndex = if (currentSelected == null) 0 else accounts.indexOfFirst { it.id == currentSelected.id } + 1
-                            if (targetIndex >= 0) {
-                                val currentMappedIndex = pagerState.currentPage % listSize
-                                if (currentMappedIndex != targetIndex) {
-                                    val diff1 = targetIndex - currentMappedIndex
-                                    val diff2 = diff1 + listSize
-                                    val diff3 = diff1 - listSize
-                                    val offset = listOf(diff1, diff2, diff3).minByOrNull { kotlin.math.abs(it) } ?: diff1
-                                    if (isFirstPageSync) {
-                                        pagerState.scrollToPage(pagerState.currentPage + offset)
-                                    } else {
-                                        pagerState.animateScrollToPage(pagerState.currentPage + offset)
-                                    }
-                                }
-                                isFirstPageSync = false
-                            }
-                        }
-                    }
-
-                    HorizontalPager(
-                        state = pagerState,
-                        contentPadding = PaddingValues(horizontal = 48.dp),
-                            pageSpacing = 16.dp,
-                            beyondViewportPageCount = 1,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(215.dp)
-                        ) { page ->
-                            val mappedIndex = page % listSize
-                            val item = pagerList[mappedIndex]
-                            val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .graphicsLayer {
-                                        val pageOffsetAbs = pageOffset.absoluteValue
-                                        val scale = 0.86f + (1f - 0.86f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
-                                        val alphaVal = 0.6f + (1f - 0.6f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
-
-                                        scaleX = scale
-                                        scaleY = scale
-                                        this.alpha = alphaVal
-                                        rotationY = -22f * pageOffset.coerceIn(-1f, 1f)
-                                        cameraDistance = 12f * density
-                                    }
-                                    .zIndex(1f - pageOffset.absoluteValue),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                when (item) {
-                                    null -> {
-                                        OverviewCard(
-                                            netBalance = globalNetBalance,
-                                            totalIncome = globalIncome,
-                                            totalExpense = globalExpense,
-                                            currencySymbol = currencySymbol,
-                                            isDataVisible = isDataVisible,
-                                            onToggleVisibility = handleToggleVisibility,
-                                            onClick = { showBottomSheetSelector = true }
-                                        )
-                                    }
-                                    "ADD_NEW" -> {
-                                        AddCardPlaceholder(onClick = onAddAccountClick)
-                                    }
-                                    is AccountEntity -> {
-                                        val account = item
-                                        val accountTransactions = remember(allTransactions, account) {
-                                            allTransactions.filter {
-                                                it.accountName.equals(account.name, ignoreCase = true)
-                                            }
-                                        }
-                                        val accIncome = remember(accountTransactions) {
-                                            accountTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-                                        }
-                                        val accExpense = remember(accountTransactions) {
-                                            accountTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
-                                        }
-                                        val accBalance = accIncome - accExpense
-
-                                        SelectedAccountCard(
-                                            account = account,
-                                            netBalance = accBalance,
-                                            totalIncome = accIncome,
-                                            totalExpense = accExpense,
-                                            currencySymbol = currencySymbol,
-                                            isDataVisible = isDataVisible,
-                                            onToggleVisibility = handleToggleVisibility,
-                                            onClick = { showBottomSheetSelector = true },
-                                            onEditClick = { onEditAccountClick(account) }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                IconButton(
+                    onClick = { },
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        item {
-                            FilterChip(
-                                selected = selectedFilter == null,
-                                onClick = { dashboardViewModel.setFilter(null) },
-                                label = { Text("All") },
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)
-                            )
-                        }
-                        item {
-                            FilterChip(
-                                selected = selectedFilter == TransactionType.INCOME,
-                                onClick = { dashboardViewModel.setFilter(TransactionType.INCOME) },
-                                label = { Text("Income") },
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen, selectedLabelColor = Color.White)
-                            )
-                        }
-                        item {
-                            FilterChip(
-                                selected = selectedFilter == TransactionType.EXPENSE,
-                                onClick = { dashboardViewModel.setFilter(TransactionType.EXPENSE) },
-                                label = { Text("Expenses") },
-                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed, selectedLabelColor = Color.White)
-                            )
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_notification),
+                        contentDescription = "Notifications",
+                        tint = androidx.compose.ui.graphics.Color.Unspecified,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // === Adaptive Dashboard Card Carousel (Anchored) ===
+            if (accounts.isEmpty()) {
+                EmptyAccountsCard(onAddAccountClick = onAddAccountClick)
+            } else {
+                val pagerList = remember(accounts) { (listOf(null) + accounts + listOf("ADD_NEW")) as List<Any?> }
+                val listSize = pagerList.size
+                val initialPage = remember(listSize, selectedAccount) {
+                    val currentSelected = selectedAccount
+                    val targetIndex = if (currentSelected == null) 0 else (accounts.indexOfFirst { it.id == currentSelected.id }.coerceAtLeast(0) + 1)
+                    5000 * listSize + targetIndex
+                }
+                val pagerState = rememberPagerState(
+                    initialPage = initialPage,
+                    pageCount = { Int.MAX_VALUE }
+                )
+
+                val globalIncome = remember(allTransactions) {
+                    allTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                }
+                val globalExpense = remember(allTransactions) {
+                    allTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+                }
+                val globalNetBalance = remember(globalIncome, globalExpense) { globalIncome - globalExpense }
+
+                // Two-way sync: Pager -> ViewModel selection
+                LaunchedEffect(pagerState, listSize, accounts) {
+                    snapshotFlow { pagerState.settledPage }.collect { page ->
+                        if (listSize > 0) {
+                            val currentMappedIndex = page % listSize
+                            val currentSelectedAccount = pagerList.getOrNull(currentMappedIndex)
+                            if (currentSelectedAccount is AccountEntity?) {
+                                if (selectedAccount != currentSelectedAccount) {
+                                    dashboardViewModel.setSelectedAccount(currentSelectedAccount)
+                                }
+                            }
                         }
                     }
+                }
 
-                    Spacer(modifier = Modifier.width(8.dp))
+                // Two-way sync: ViewModel selection -> Pager
+                var isFirstPageSync by remember { mutableStateOf(true) }
+                LaunchedEffect(selectedAccount, listSize, accounts) {
+                    if (listSize > 0) {
+                        val currentSelected = selectedAccount
+                        val targetIndex = if (currentSelected == null) 0 else accounts.indexOfFirst { it.id == currentSelected.id } + 1
+                        if (targetIndex >= 0) {
+                            val currentMappedIndex = pagerState.currentPage % listSize
+                            if (currentMappedIndex != targetIndex) {
+                                val diff1 = targetIndex - currentMappedIndex
+                                val diff2 = diff1 + listSize
+                                val diff3 = diff1 - listSize
+                                val offset = listOf(diff1, diff2, diff3).minByOrNull { kotlin.math.abs(it) } ?: diff1
+                                if (isFirstPageSync) {
+                                    pagerState.scrollToPage(pagerState.currentPage + offset)
+                                } else {
+                                    pagerState.animateScrollToPage(pagerState.currentPage + offset)
+                                }
+                            }
+                            isFirstPageSync = false
+                        }
+                    }
+                }
+
+                HorizontalPager(
+                    state = pagerState,
+                    contentPadding = PaddingValues(horizontal = 48.dp),
+                    pageSpacing = 16.dp,
+                    beyondViewportPageCount = 1,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(215.dp)
+                ) { page ->
+                    val mappedIndex = page % listSize
+                    val item = pagerList[mappedIndex]
+                    val pageOffset = ((pagerState.currentPage - page) + pagerState.currentPageOffsetFraction)
 
                     Box(
                         modifier = Modifier
-                            .height(32.dp)
-                            .width(44.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
-                            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
-                            .clickable { onAddTransactionClick(selectedFilter) },
+                            .fillMaxWidth()
+                            .graphicsLayer {
+                                val pageOffsetAbs = pageOffset.absoluteValue
+                                val scale = 0.86f + (1f - 0.86f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+                                val alphaVal = 0.6f + (1f - 0.6f) * (1f - pageOffsetAbs.coerceIn(0f, 1f))
+
+                                scaleX = scale
+                                scaleY = scale
+                                this.alpha = alphaVal
+                                rotationY = -22f * pageOffset.coerceIn(-1f, 1f)
+                                cameraDistance = 12f * density
+                            }
+                            .zIndex(1f - pageOffset.absoluteValue),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Transaction",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
+                        when (item) {
+                            null -> {
+                                OverviewCard(
+                                    netBalance = globalNetBalance,
+                                    totalIncome = globalIncome,
+                                    totalExpense = globalExpense,
+                                    currencySymbol = currencySymbol,
+                                    isDataVisible = isDataVisible,
+                                    onToggleVisibility = handleToggleVisibility,
+                                    onClick = { showBottomSheetSelector = true }
+                                )
+                            }
+                            "ADD_NEW" -> {
+                                AddCardPlaceholder(onClick = onAddAccountClick)
+                            }
+                            is AccountEntity -> {
+                                val account = item
+                                val accountTransactions = remember(allTransactions, account) {
+                                    allTransactions.filter {
+                                        it.accountName.equals(account.name, ignoreCase = true)
+                                    }
+                                }
+                                val accIncome = remember(accountTransactions) {
+                                    accountTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
+                                }
+                                val accExpense = remember(accountTransactions) {
+                                    accountTransactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+                                }
+                                val accBalance = accIncome - accExpense
+
+                                SelectedAccountCard(
+                                    account = account,
+                                    netBalance = accBalance,
+                                    totalIncome = accIncome,
+                                    totalExpense = accExpense,
+                                    currencySymbol = currencySymbol,
+                                    isDataVisible = isDataVisible,
+                                    onToggleVisibility = handleToggleVisibility,
+                                    onClick = { showBottomSheetSelector = true },
+                                    onEditClick = { onEditAccountClick(account) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Filter Chips Header (Anchored)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    item {
+                        FilterChip(
+                            selected = selectedFilter == null,
+                            onClick = { dashboardViewModel.setFilter(null) },
+                            label = { Text("All") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MaterialTheme.colorScheme.primary, selectedLabelColor = MaterialTheme.colorScheme.onPrimary)
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = selectedFilter == TransactionType.INCOME,
+                            onClick = { dashboardViewModel.setFilter(TransactionType.INCOME) },
+                            label = { Text("Income") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen, selectedLabelColor = Color.White)
+                        )
+                    }
+                    item {
+                        FilterChip(
+                            selected = selectedFilter == TransactionType.EXPENSE,
+                            onClick = { dashboardViewModel.setFilter(TransactionType.EXPENSE) },
+                            label = { Text("Expenses") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed, selectedLabelColor = Color.White)
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+                Spacer(modifier = Modifier.width(8.dp))
 
-            item {
-                // Recent Activity Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Box(
+                    modifier = Modifier
+                        .height(32.dp)
+                        .width(44.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                        .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+                        .clickable { onAddTransactionClick(selectedFilter) },
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text("Recent Activity", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
-                    Text("${transactions.size} items", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Transaction",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
-
-                Spacer(modifier = Modifier.height(12.dp))
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Recent Activity Header (Anchored)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Recent Activity", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground))
+                Text("${transactions.size} items", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // === Scrollable Recent Activity List (Underneath) ===
             if (transactions.isEmpty()) {
-                item {
-                    val emptyTitle = if (selectedAccount == null) "No Activity Registered Yet" else "No Activity for ${selectedAccount?.name}"
-                    val emptyDesc = if (selectedAccount == null) {
-                        "You haven't recorded any transactions across any of your accounts yet. Tap below to start tracking your cash flow!"
-                    } else {
-                        "There are no transactions recorded for this wallet. Tap below to add a transaction to this specific account!"
-                    }
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp)) {
-                            Text(emptyTitle, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(emptyDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { onAddTransactionClick(selectedFilter) }, shape = RoundedCornerShape(12.dp)) { Text("Record First Transaction") }
-                        }
+                val emptyTitle = if (selectedAccount == null) "No Activity Registered Yet" else "No Activity for ${selectedAccount?.name}"
+                val emptyDesc = if (selectedAccount == null) {
+                    "You haven't recorded any transactions across any of your accounts yet. Tap below to start tracking your cash flow!"
+                } else {
+                    "There are no transactions recorded for this wallet. Tap below to add a transaction to this specific account!"
+                }
+                Box(modifier = Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(horizontal = 24.dp)) {
+                        Text(emptyTitle, style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(emptyDesc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(onClick = { onAddTransactionClick(selectedFilter) }, shape = RoundedCornerShape(12.dp)) { Text("Record First Transaction") }
                     }
                 }
             } else {
-                items(items = transactions, key = { it.id }) { tx ->
-                    TransactionRowItem(
-                        transaction = tx,
-                        currencySymbol = currencySymbol,
-                        timeTicker = timeTicker,
-                        onClick = { onTransactionClick(tx) },
-                        onLongClick = { onTransactionLongClick(tx) }
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
+                LazyColumn(
+                    state = portraitLazyListState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    contentPadding = PaddingValues(bottom = bottomPadding)
+                ) {
+                    items(items = transactions, key = { it.id }) { tx ->
+                        TransactionRowItem(
+                            transaction = tx,
+                            currencySymbol = currencySymbol,
+                            timeTicker = timeTicker,
+                            onClick = { onTransactionClick(tx) },
+                            onLongClick = { onTransactionLongClick(tx) }
+                        )
+                    }
                 }
-            }
-            item {
-                Spacer(modifier = Modifier.height(bottomPadding))
             }
         }
     }
