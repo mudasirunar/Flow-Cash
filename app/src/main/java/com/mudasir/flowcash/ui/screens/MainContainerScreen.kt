@@ -23,6 +23,9 @@ import com.mudasir.flowcash.R
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollFactory
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -271,85 +274,90 @@ fun MainContainerScreen(
                     if (navBarHeightDp > 0.dp) navBarHeightDp + 16.dp else 100.dp
                 }
 
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize(),
-                    userScrollEnabled = !showAddAccountScreen
-                ) { page ->
-                    when (page) {
-                        0 -> DashboardScreen(
-                            dashboardViewModel = dashboardViewModel,
-                            settingsViewModel = settingsViewModel,
-                            userName = userName,
-                            userEmail = userEmail,
-                            profilePicUrl = authState.user?.profilePicUrl,
-                            avatarColorHex = authState.user?.avatarColorHex,
-                            currencySymbol = currency,
-                            onAddTransactionClick = { filterType ->
-                                if (accounts.isEmpty()) {
-                                    showAccountRequiredDialog = true
-                                } else {
-                                    initialTransactionType = filterType ?: TransactionType.INCOME
-                                    showAddModal = true
-                                }
-                            },
-                            onAddAccountClick = {
-                                editingAccountId = null
-                                showAddAccountScreen = true
-                            },
-                            onEditAccountClick = { account ->
-                                if (biometricsEnabled) {
-                                    BiometricAuthHelper.promptBiometricAuth(
-                                        context = context,
-                                        title = "Edit Card Security",
-                                        subtitle = "Scan fingerprint or Face ID to edit ${account.name} details",
-                                        onSuccess = {
-                                            editingAccountId = account.id
-                                            showAddAccountScreen = true
-                                        },
-                                        onError = { err ->
-                                            biometricAlertTitle = "Authentication Required"
-                                            biometricAlertMessage = err
-                                        }
-                                    )
-                                } else {
-                                    editingAccountId = account.id
+                @OptIn(ExperimentalFoundationApi::class)
+                CompositionLocalProvider(
+                    LocalOverscrollFactory provides null
+                ) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize(),
+                        userScrollEnabled = !showAddAccountScreen
+                    ) { page ->
+                        when (page) {
+                            0 -> DashboardScreen(
+                                dashboardViewModel = dashboardViewModel,
+                                settingsViewModel = settingsViewModel,
+                                userName = userName,
+                                userEmail = userEmail,
+                                profilePicUrl = authState.user?.profilePicUrl,
+                                avatarColorHex = authState.user?.avatarColorHex,
+                                currencySymbol = currency,
+                                onAddTransactionClick = { filterType ->
+                                    if (accounts.isEmpty()) {
+                                        showAccountRequiredDialog = true
+                                    } else {
+                                        initialTransactionType = filterType ?: TransactionType.INCOME
+                                        showAddModal = true
+                                    }
+                                },
+                                onAddAccountClick = {
+                                    editingAccountId = null
                                     showAddAccountScreen = true
-                                }
-                            },
-                            onTransactionClick = { tx -> selectedTransactionForDetails = tx },
-                            onTransactionLongClick = { tx -> selectedTransactionForMenu = tx },
-                            bottomPadding = calculatedBottomPadding
-                        )
-                        1 -> TransactionsScreen(
-                            dashboardViewModel = dashboardViewModel,
-                            currencySymbol = currency,
-                            onAddTransactionClick = {
-                                if (accounts.isEmpty()) {
-                                    showAccountRequiredDialog = true
-                                } else {
-                                    initialTransactionType = TransactionType.INCOME
-                                    showAddModal = true
-                                }
-                            },
-                            onTransactionClick = { tx -> selectedTransactionForDetails = tx },
-                            onTransactionLongClick = { tx -> selectedTransactionForMenu = tx },
-                            bottomPadding = calculatedBottomPadding
-                        )
-                        2 -> AnalyticsScreen(
-                            dashboardViewModel = dashboardViewModel,
-                            currencySymbol = currency,
-                            bottomPadding = calculatedBottomPadding
-                        )
-                        3 -> SettingsScreen(
-                            settingsViewModel = settingsViewModel,
-                            authViewModel = authViewModel,
-                            dashboardViewModel = dashboardViewModel,
-                            userName = userName,
-                            userEmail = userEmail,
-                            onLogoutClick = onLogoutClick,
-                            bottomPadding = calculatedBottomPadding
-                        )
+                                },
+                                onEditAccountClick = { account ->
+                                    if (biometricsEnabled) {
+                                        BiometricAuthHelper.promptBiometricAuth(
+                                            context = context,
+                                            title = "Edit Card Security",
+                                            subtitle = "Scan fingerprint or Face ID to edit ${account.name} details",
+                                            onSuccess = {
+                                                editingAccountId = account.id
+                                                showAddAccountScreen = true
+                                            },
+                                            onError = { err ->
+                                                biometricAlertTitle = "Authentication Required"
+                                                biometricAlertMessage = err
+                                            }
+                                        )
+                                    } else {
+                                        editingAccountId = account.id
+                                        showAddAccountScreen = true
+                                    }
+                                },
+                                onTransactionClick = { tx -> selectedTransactionForDetails = tx },
+                                onTransactionLongClick = { tx -> selectedTransactionForMenu = tx },
+                                bottomPadding = calculatedBottomPadding
+                            )
+                            1 -> TransactionsScreen(
+                                dashboardViewModel = dashboardViewModel,
+                                currencySymbol = currency,
+                                onAddTransactionClick = {
+                                    if (accounts.isEmpty()) {
+                                        showAccountRequiredDialog = true
+                                    } else {
+                                        initialTransactionType = TransactionType.INCOME
+                                        showAddModal = true
+                                    }
+                                },
+                                onTransactionClick = { tx -> selectedTransactionForDetails = tx },
+                                onTransactionLongClick = { tx -> selectedTransactionForMenu = tx },
+                                bottomPadding = calculatedBottomPadding
+                            )
+                            2 -> AnalyticsScreen(
+                                dashboardViewModel = dashboardViewModel,
+                                currencySymbol = currency,
+                                bottomPadding = calculatedBottomPadding
+                            )
+                            3 -> SettingsScreen(
+                                settingsViewModel = settingsViewModel,
+                                authViewModel = authViewModel,
+                                dashboardViewModel = dashboardViewModel,
+                                userName = userName,
+                                userEmail = userEmail,
+                                onLogoutClick = onLogoutClick,
+                                bottomPadding = calculatedBottomPadding
+                            )
+                        }
                     }
                 }
 
