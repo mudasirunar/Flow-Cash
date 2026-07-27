@@ -2,19 +2,23 @@ package com.mudasir.flowcash.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,6 +30,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -33,15 +38,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -51,33 +47,23 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Notes
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
-import androidx.compose.material.icons.automirrored.filled.TrendingDown
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AddCard
-import androidx.compose.material.icons.filled.Analytics
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notes
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Security
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.TrendingDown
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.Work
@@ -97,7 +83,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -140,18 +125,18 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainContainerScreen(
-        authViewModel: AuthViewModel,
-        dashboardViewModel: DashboardViewModel,
-        settingsViewModel: SettingsViewModel,
-        onLogoutClick: () -> Unit
+    authViewModel: AuthViewModel,
+    dashboardViewModel: DashboardViewModel,
+    settingsViewModel: SettingsViewModel,
+    onLogoutClick: () -> Unit
 ) {
     val items =
-            listOf(
-                    BottomNavItem.Dashboard,
-                    BottomNavItem.Transactions,
-                    BottomNavItem.Analytics,
-                    BottomNavItem.Settings
-            )
+        listOf(
+            BottomNavItem.Dashboard,
+            BottomNavItem.Transactions,
+            BottomNavItem.Analytics,
+            BottomNavItem.Settings
+        )
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { items.size })
     val selectedIndex = pagerState.currentPage
@@ -160,7 +145,7 @@ fun MainContainerScreen(
     var navBarHeightPx by remember { mutableIntStateOf(0) }
     val localDensity = LocalDensity.current
     val navBarHeightDp =
-            remember(navBarHeightPx, localDensity) { with(localDensity) { navBarHeightPx.toDp() } }
+        remember(navBarHeightPx, localDensity) { with(localDensity) { navBarHeightPx.toDp() } }
     var showAddModal by rememberSaveable { mutableStateOf(false) }
     var showAddAccountScreen by rememberSaveable { mutableStateOf(false) }
 
@@ -185,7 +170,7 @@ fun MainContainerScreen(
     var biometricAlertMessage by remember { mutableStateOf<String?>(null) }
 
     val accountToEdit =
-            remember(editingAccountId, accounts) { accounts.find { it.id == editingAccountId } }
+        remember(editingAccountId, accounts) { accounts.find { it.id == editingAccountId } }
 
     val syncState by dashboardViewModel.syncState.collectAsState()
 
@@ -204,7 +189,7 @@ fun MainContainerScreen(
             transactionToEdit = null
         }
         if (selectedTransactionForDetails != null &&
-                        allTransactions.none { it.id == selectedTransactionForDetails?.id }
+            allTransactions.none { it.id == selectedTransactionForDetails?.id }
         ) {
             selectedTransactionForDetails = null
         }
@@ -218,8 +203,8 @@ fun MainContainerScreen(
         BackHandler {
             coroutineScope.launch {
                 pagerState.animateScrollToPage(
-                        page = 0,
-                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                    page = 0,
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
                 )
             }
         }
@@ -234,168 +219,165 @@ fun MainContainerScreen(
 
         // Fullscreen overlay hides bottom bar & covers status bar properly
         AddAccountScreen(
-                accountToEdit = accountToEdit,
-                onSave = { account ->
-                    dashboardViewModel.addAccount(account)
-                    dashboardViewModel.setSelectedAccount(account)
-                    showAddAccountScreen = false
-                    editingAccountId = null
-                },
-                onDelete = { account ->
-                    dashboardViewModel.deleteAccountAndTransactions(account)
-                    showAddAccountScreen = false
-                    editingAccountId = null
-                },
-                onBack = {
-                    showAddAccountScreen = false
-                    editingAccountId = null
-                }
+            accountToEdit = accountToEdit,
+            onSave = { account ->
+                dashboardViewModel.addAccount(account)
+                dashboardViewModel.setSelectedAccount(account)
+                showAddAccountScreen = false
+                editingAccountId = null
+            },
+            onDelete = { account ->
+                dashboardViewModel.deleteAccountAndTransactions(account)
+                showAddAccountScreen = false
+                editingAccountId = null
+            },
+            onBack = {
+                showAddAccountScreen = false
+                editingAccountId = null
+            }
         )
     } else {
         Scaffold(containerColor = Color.Transparent) { innerPadding ->
             Box(
-                    modifier =
-                            Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())
+                modifier =
+                    Modifier.fillMaxSize().padding(top = innerPadding.calculateTopPadding())
             ) {
                 val calculatedBottomPadding =
-                        remember(navBarHeightDp) {
-                            if (navBarHeightDp > 0.dp) navBarHeightDp + 16.dp else 100.dp
-                        }
+                    remember(navBarHeightDp) {
+                        if (navBarHeightDp > 0.dp) navBarHeightDp + 16.dp else 100.dp
+                    }
 
-                @OptIn(ExperimentalFoundationApi::class)
-                CompositionLocalProvider(LocalOverscrollFactory provides null) {
-                    HorizontalPager(
-                            state = pagerState,
-                            modifier = Modifier.fillMaxSize(),
-                            userScrollEnabled = !showAddAccountScreen
-                    ) { page ->
-                        when (page) {
-                            0 ->
-                                    DashboardScreen(
-                                            dashboardViewModel = dashboardViewModel,
-                                            settingsViewModel = settingsViewModel,
-                                            userName = userName,
-                                            userEmail = userEmail,
-                                            profilePicUrl = authState.user?.profilePicUrl,
-                                            avatarColorHex = authState.user?.avatarColorHex,
-                                            currencySymbol = currency,
-                                            onAddTransactionClick = { filterType ->
-                                                if (accounts.isEmpty()) {
-                                                    showAccountRequiredDialog = true
-                                                } else {
-                                                    initialTransactionType =
-                                                            filterType ?: TransactionType.INCOME
-                                                    showAddModal = true
-                                                }
-                                            },
-                                            onAddAccountClick = {
-                                                editingAccountId = null
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.fillMaxSize(),
+                    userScrollEnabled = !showAddAccountScreen
+                ) { page ->
+                    when (page) {
+                        0 ->
+                            DashboardScreen(
+                                dashboardViewModel = dashboardViewModel,
+                                settingsViewModel = settingsViewModel,
+                                userName = userName,
+                                userEmail = userEmail,
+                                profilePicUrl = authState.user?.profilePicUrl,
+                                avatarColorHex = authState.user?.avatarColorHex,
+                                currencySymbol = currency,
+                                onAddTransactionClick = { filterType ->
+                                    if (accounts.isEmpty()) {
+                                        showAccountRequiredDialog = true
+                                    } else {
+                                        initialTransactionType =
+                                            filterType ?: TransactionType.INCOME
+                                        showAddModal = true
+                                    }
+                                },
+                                onAddAccountClick = {
+                                    editingAccountId = null
+                                    showAddAccountScreen = true
+                                },
+                                onEditAccountClick = { account ->
+                                    if (biometricsEnabled) {
+                                        BiometricAuthHelper.promptBiometricAuth(
+                                            context = context,
+                                            title = "Edit Card Security",
+                                            subtitle =
+                                                "Scan fingerprint or Face ID to edit ${account.name} details",
+                                            onSuccess = {
+                                                editingAccountId = account.id
                                                 showAddAccountScreen = true
                                             },
-                                            onEditAccountClick = { account ->
-                                                if (biometricsEnabled) {
-                                                    BiometricAuthHelper.promptBiometricAuth(
-                                                            context = context,
-                                                            title = "Edit Card Security",
-                                                            subtitle =
-                                                                    "Scan fingerprint or Face ID to edit ${account.name} details",
-                                                            onSuccess = {
-                                                                editingAccountId = account.id
-                                                                showAddAccountScreen = true
-                                                            },
-                                                            onError = { err ->
-                                                                biometricAlertTitle =
-                                                                        "Authentication Required"
-                                                                biometricAlertMessage = err
-                                                            }
-                                                    )
-                                                } else {
-                                                    editingAccountId = account.id
-                                                    showAddAccountScreen = true
-                                                }
-                                            },
-                                            onTransactionClick = { tx ->
-                                                selectedTransactionForDetails = tx
-                                            },
-                                            onTransactionLongClick = { tx ->
-                                                selectedTransactionForMenu = tx
-                                            },
-                                            bottomPadding = calculatedBottomPadding
-                                    )
-                            1 ->
-                                    TransactionsScreen(
-                                            dashboardViewModel = dashboardViewModel,
-                                            currencySymbol = currency,
-                                            onAddTransactionClick = {
-                                                if (accounts.isEmpty()) {
-                                                    showAccountRequiredDialog = true
-                                                } else {
-                                                    initialTransactionType = TransactionType.INCOME
-                                                    showAddModal = true
-                                                }
-                                            },
-                                            onTransactionClick = { tx ->
-                                                selectedTransactionForDetails = tx
-                                            },
-                                            onTransactionLongClick = { tx ->
-                                                selectedTransactionForMenu = tx
-                                            },
-                                            bottomPadding = calculatedBottomPadding
-                                    )
-                            2 ->
-                                    AnalyticsScreen(
-                                            dashboardViewModel = dashboardViewModel,
-                                            currencySymbol = currency,
-                                            bottomPadding = calculatedBottomPadding
-                                    )
-                            3 ->
-                                    SettingsScreen(
-                                            settingsViewModel = settingsViewModel,
-                                            authViewModel = authViewModel,
-                                            dashboardViewModel = dashboardViewModel,
-                                            userName = userName,
-                                            userEmail = userEmail,
-                                            onLogoutClick = onLogoutClick,
-                                            bottomPadding = calculatedBottomPadding
-                                    )
-                        }
+                                            onError = { err ->
+                                                biometricAlertTitle =
+                                                    "Authentication Required"
+                                                biometricAlertMessage = err
+                                            }
+                                        )
+                                    } else {
+                                        editingAccountId = account.id
+                                        showAddAccountScreen = true
+                                    }
+                                },
+                                onTransactionClick = { tx ->
+                                    selectedTransactionForDetails = tx
+                                },
+                                onTransactionLongClick = { tx ->
+                                    selectedTransactionForMenu = tx
+                                },
+                                bottomPadding = calculatedBottomPadding
+                            )
+                        1 ->
+                            TransactionsScreen(
+                                dashboardViewModel = dashboardViewModel,
+                                currencySymbol = currency,
+                                onAddTransactionClick = {
+                                    if (accounts.isEmpty()) {
+                                        showAccountRequiredDialog = true
+                                    } else {
+                                        initialTransactionType = TransactionType.INCOME
+                                        showAddModal = true
+                                    }
+                                },
+                                onTransactionClick = { tx ->
+                                    selectedTransactionForDetails = tx
+                                },
+                                onTransactionLongClick = { tx ->
+                                    selectedTransactionForMenu = tx
+                                },
+                                bottomPadding = calculatedBottomPadding
+                            )
+                        2 ->
+                            AnalyticsScreen(
+                                dashboardViewModel = dashboardViewModel,
+                                currencySymbol = currency,
+                                bottomPadding = calculatedBottomPadding
+                            )
+                        3 ->
+                            SettingsScreen(
+                                settingsViewModel = settingsViewModel,
+                                authViewModel = authViewModel,
+                                dashboardViewModel = dashboardViewModel,
+                                userName = userName,
+                                userEmail = userEmail,
+                                onLogoutClick = onLogoutClick,
+                                bottomPadding = calculatedBottomPadding
+                            )
                     }
                 }
 
                 val isImeVisible =
-                        WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
+                    WindowInsets.ime.asPaddingValues().calculateBottomPadding() > 0.dp
 
                 AnimatedVisibility(
-                        visible = !isDashboardLoading && !isImeVisible,
-                        enter =
-                                fadeIn(animationSpec = tween(300)) +
-                                        slideInVertically(initialOffsetY = { it / 2 }),
-                        exit =
-                                fadeOut(animationSpec = tween(200)) +
-                                        slideOutVertically(targetOffsetY = { it / 2 }),
-                        modifier = Modifier.align(Alignment.BottomCenter)
+                    visible = !isDashboardLoading && !isImeVisible,
+                    enter =
+                        fadeIn(animationSpec = tween(300)) +
+                                slideInVertically(initialOffsetY = { it / 2 }),
+                    exit =
+                        fadeOut(animationSpec = tween(200)) +
+                                slideOutVertically(targetOffsetY = { it / 2 }),
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 ) {
                     FloatingBottomNavigation(
-                            items = items,
-                            pagerState = pagerState,
-                            onItemSelected = { index ->
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(
-                                            page = index,
-                                            animationSpec =
-                                                    tween(
-                                                            durationMillis = 300,
-                                                            easing = FastOutSlowInEasing
-                                                    )
-                                    )
+                        items = items,
+                        pagerState = pagerState,
+                        onItemSelected = { index ->
+                            coroutineScope.launch {
+                                pagerState.animateScrollToPage(
+                                    page = index,
+                                    animationSpec =
+                                        tween(
+                                            durationMillis = 300,
+                                            easing = FastOutSlowInEasing
+                                        )
+                                )
+                            }
+                        },
+                        modifier =
+                            Modifier.onGloballyPositioned { coordinates ->
+                                if (coordinates.size.height != navBarHeightPx) {
+                                    navBarHeightPx = coordinates.size.height
                                 }
-                            },
-                            modifier =
-                                    Modifier.onGloballyPositioned { coordinates ->
-                                        if (coordinates.size.height != navBarHeightPx) {
-                                            navBarHeightPx = coordinates.size.height
-                                        }
-                                    }
+                            }
                     )
                 }
             }
@@ -404,67 +386,67 @@ fun MainContainerScreen(
 
     val welcomeEvent = authState.welcomeEvent
     FloatingWelcomeBanner(
-            isVisible = welcomeEvent != null && !isDashboardLoading,
-            userName = welcomeEvent?.name ?: userName,
-            isNewUser = welcomeEvent?.isNewUser ?: false,
-            onDismiss = { authViewModel.clearWelcomeEvent() }
+        isVisible = welcomeEvent != null && !isDashboardLoading,
+        userName = welcomeEvent?.name ?: userName,
+        isNewUser = welcomeEvent?.isNewUser ?: false,
+        onDismiss = { authViewModel.clearWelcomeEvent() }
     )
 
     if (biometricAlertMessage != null) {
         FlowCashAlertDialog(
-                onDismissRequest = { biometricAlertMessage = null },
-                title = biometricAlertTitle ?: "Biometric Security",
-                message = biometricAlertMessage ?: "",
-                icon = Icons.Default.Security
+            onDismissRequest = { biometricAlertMessage = null },
+            title = biometricAlertTitle ?: "Biometric Security",
+            message = biometricAlertMessage ?: "",
+            icon = Icons.Default.Security
         )
     }
 
     if (showAccountRequiredDialog) {
         FlowCashConfirmDialog(
-                onDismissRequest = { showAccountRequiredDialog = false },
-                title = "Account Required",
-                message = "You need to create a card or wallet account before adding transactions.",
-                icon = Icons.Default.CreditCard,
-                confirmButtonText = "Create",
-                onConfirm = {
-                    showAccountRequiredDialog = false
-                    editingAccountId = null
-                    showAddAccountScreen = true
-                }
+            onDismissRequest = { showAccountRequiredDialog = false },
+            title = "Account Required",
+            message = "You need to create a card or wallet account before adding transactions.",
+            icon = Icons.Default.CreditCard,
+            confirmButtonText = "Create",
+            onConfirm = {
+                showAccountRequiredDialog = false
+                editingAccountId = null
+                showAddAccountScreen = true
+            }
         )
     }
 
     if (showAddModal) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
-                onDismissRequest = { showAddModal = false },
-                modifier = Modifier.widthIn(max = 560.dp),
-                sheetState = sheetState,
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
+            onDismissRequest = { showAddModal = false },
+            modifier = Modifier.widthIn(max = 560.dp),
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
         ) {
             AddTransactionSheetContent(
-                    initialType = initialTransactionType,
-                    initialAccountName = selectedAccount?.name,
-                    currencySymbol = currency,
-                    accountsList = accounts,
-                    onAdd = { title, amt, type, category, accountName, note, customCategory ->
-                        dashboardViewModel.addTransaction(
-                                title = title,
-                                amount = amt,
-                                type = type,
-                                category = category,
-                                accountName = accountName,
-                                note = note,
-                                subtitle =
-                                        if (category == CategoryType.OTHER &&
-                                                        !customCategory.isNullOrBlank()
-                                        )
-                                                customCategory
-                                        else "Manual entry"
-                        )
-                        showAddModal = false
-                    }
+                initialType = initialTransactionType,
+                initialAccountName = selectedAccount?.name,
+                currencySymbol = currency,
+                accountsList = accounts,
+                onAdd = { title, amt, type, category, accountName, note, customCategory ->
+                    dashboardViewModel.addTransaction(
+                        title = title,
+                        amount = amt,
+                        type = type,
+                        category = category,
+                        accountName = accountName,
+                        note = note,
+                        subtitle =
+                            if (category == CategoryType.OTHER &&
+                                !customCategory.isNullOrBlank()
+                            )
+                                customCategory
+                            else "Manual entry"
+                    )
+                    showAddModal = false
+                }
             )
         }
     }
@@ -476,237 +458,237 @@ fun MainContainerScreen(
             java.text.SimpleDateFormat("dd MMM yyyy, hh:mm a", java.util.Locale.getDefault())
         }
         val exactTime =
-                remember(detailsTx.timestamp) { sdf.format(java.util.Date(detailsTx.timestamp)) }
+            remember(detailsTx.timestamp) { sdf.format(java.util.Date(detailsTx.timestamp)) }
         val relativeTime = remember(detailsTx.timestamp) { formatRelativeTime(detailsTx.timestamp) }
 
         androidx.compose.ui.window.Dialog(
-                onDismissRequest = { selectedTransactionForDetails = null },
-                properties =
-                        androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+            onDismissRequest = { selectedTransactionForDetails = null },
+            properties =
+                androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
         ) {
             Card(
-                    modifier =
-                            Modifier.widthIn(max = 440.dp)
-                                    .fillMaxWidth(0.92f)
-                                    .clip(RoundedCornerShape(28.dp))
-                                    .border(
-                                            1.5.dp,
-                                            (if (isIncome) IncomeGreen else ExpenseRed).copy(
-                                                    alpha = 0.45f
-                                            ),
-                                            RoundedCornerShape(28.dp)
-                                    ),
-                    colors =
-                            CardDefaults.cardColors(
-                                    containerColor = MaterialTheme.colorScheme.surface
+                modifier =
+                    Modifier.widthIn(max = 440.dp)
+                        .fillMaxWidth(0.92f)
+                        .clip(RoundedCornerShape(28.dp))
+                        .border(
+                            1.5.dp,
+                            (if (isIncome) IncomeGreen else ExpenseRed).copy(
+                                alpha = 0.45f
                             ),
-                    shape = RoundedCornerShape(28.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+                            RoundedCornerShape(28.dp)
+                        ),
+                colors =
+                    CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                shape = RoundedCornerShape(28.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
             ) {
                 Column(
-                        modifier =
-                                Modifier.fillMaxWidth()
-                                        .verticalScroll(rememberScrollState())
-                                        .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Box(
-                            modifier =
-                                    Modifier.size(72.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                    if (isIncome) IncomeGreen.copy(alpha = 0.15f)
-                                                    else ExpenseRed.copy(alpha = 0.15f)
-                                            ),
-                            contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier.size(72.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isIncome) IncomeGreen.copy(alpha = 0.15f)
+                                    else ExpenseRed.copy(alpha = 0.15f)
+                                ),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                                imageVector = getCategoryIcon(detailsTx.category),
-                                contentDescription = detailsTx.category.name,
-                                tint = if (isIncome) IncomeGreen else ExpenseRed,
-                                modifier = Modifier.size(36.dp)
+                            imageVector = getCategoryIcon(detailsTx.category),
+                            contentDescription = detailsTx.category.name,
+                            tint = if (isIncome) IncomeGreen else ExpenseRed,
+                            modifier = Modifier.size(36.dp)
                         )
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                            text =
-                                    "${if (isIncome) "+" else "-"}$currency ${String.format("%,.2f", detailsTx.amount)}",
-                            style =
-                                    MaterialTheme.typography.headlineLarge.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = if (isIncome) IncomeGreen else ExpenseRed
-                                    )
+                        text =
+                            "${if (isIncome) "+" else "-"}$currency ${String.format("%,.2f", detailsTx.amount)}",
+                        style =
+                            MaterialTheme.typography.headlineLarge.copy(
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (isIncome) IncomeGreen else ExpenseRed
+                            )
                     )
 
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                            text = detailsTx.title,
-                            style =
-                                    MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold
-                                    ),
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        text = detailsTx.title,
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Column(
-                            modifier =
-                                    Modifier.fillMaxWidth()
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(
-                                                    MaterialTheme.colorScheme.surfaceVariant.copy(
-                                                            alpha = 0.7f
-                                                    )
-                                            )
-                                            .border(
-                                                    1.5.dp,
-                                                    MaterialTheme.colorScheme.outline.copy(
-                                                            alpha = 0.6f
-                                                    ),
-                                                    RoundedCornerShape(16.dp)
-                                            )
-                                            .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier =
+                            Modifier.fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(
+                                        alpha = 0.7f
+                                    )
+                                )
+                                .border(
+                                    1.5.dp,
+                                    MaterialTheme.colorScheme.outline.copy(
+                                        alpha = 0.6f
+                                    ),
+                                    RoundedCornerShape(16.dp)
+                                )
+                                .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                        Icons.Default.Wallet,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
+                                    Icons.Default.Wallet,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                        "Wallet / Account",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    "Wallet / Account",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Text(
-                                    detailsTx.accountName,
-                                    style =
-                                            MaterialTheme.typography.bodyMedium.copy(
-                                                    fontWeight = FontWeight.Bold
-                                            ),
-                                    color = MaterialTheme.colorScheme.onSurface
+                                detailsTx.accountName,
+                                style =
+                                    MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
                         Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                        Icons.Default.Category,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
+                                    Icons.Default.Category,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                        "Category",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    "Category",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             val catLabel =
-                                    if (detailsTx.category == CategoryType.OTHER &&
-                                                    detailsTx.subtitle.isNotBlank() &&
-                                                    detailsTx.subtitle != "Manual entry"
-                                    ) {
-                                        detailsTx.subtitle
-                                    } else {
-                                        detailsTx.category.name.lowercase().replaceFirstChar {
-                                            it.uppercase()
-                                        }
+                                if (detailsTx.category == CategoryType.OTHER &&
+                                    detailsTx.subtitle.isNotBlank() &&
+                                    detailsTx.subtitle != "Manual entry"
+                                ) {
+                                    detailsTx.subtitle
+                                } else {
+                                    detailsTx.category.name.lowercase().replaceFirstChar {
+                                        it.uppercase()
                                     }
+                                }
                             Text(
-                                    catLabel,
-                                    style =
-                                            MaterialTheme.typography.bodyMedium.copy(
-                                                    fontWeight = FontWeight.Bold
-                                            ),
-                                    color = MaterialTheme.colorScheme.onSurface
+                                catLabel,
+                                style =
+                                    MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
 
                         Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                        Icons.Default.Info,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
+                                    Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                        "Transaction Type",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    "Transaction Type",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Text(
-                                    detailsTx.type.name.lowercase().replaceFirstChar {
-                                        it.uppercase()
-                                    },
-                                    style =
-                                            MaterialTheme.typography.bodyMedium.copy(
-                                                    fontWeight = FontWeight.Bold,
-                                                    color =
-                                                            if (isIncome) IncomeGreen
-                                                            else ExpenseRed
-                                            )
+                                detailsTx.type.name.lowercase().replaceFirstChar {
+                                    it.uppercase()
+                                },
+                                style =
+                                    MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color =
+                                            if (isIncome) IncomeGreen
+                                            else ExpenseRed
+                                    )
                             )
                         }
 
                         Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                        Icons.Default.CalendarToday,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
+                                    Icons.Default.CalendarToday,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                        "Created At",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    "Created At",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                        relativeTime,
-                                        style =
-                                                MaterialTheme.typography.bodyMedium.copy(
-                                                        fontWeight = FontWeight.Bold
-                                                ),
-                                        color = MaterialTheme.colorScheme.onSurface
+                                    relativeTime,
+                                    style =
+                                        MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                        exactTime,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    exactTime,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -715,49 +697,49 @@ fun MainContainerScreen(
                     if (!detailsTx.note.isNullOrBlank()) {
                         Spacer(modifier = Modifier.height(12.dp))
                         Column(
-                                modifier =
-                                        Modifier.fillMaxWidth()
-                                                .clip(RoundedCornerShape(16.dp))
-                                                .background(
-                                                        MaterialTheme.colorScheme.surfaceVariant
-                                                                .copy(alpha = 0.7f)
-                                                )
-                                                .border(
-                                                        1.5.dp,
-                                                        MaterialTheme.colorScheme.outline.copy(
-                                                                alpha = 0.6f
-                                                        ),
-                                                        RoundedCornerShape(16.dp)
-                                                )
-                                                .padding(14.dp)
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                            .copy(alpha = 0.7f)
+                                    )
+                                    .border(
+                                        1.5.dp,
+                                        MaterialTheme.colorScheme.outline.copy(
+                                            alpha = 0.6f
+                                        ),
+                                        RoundedCornerShape(16.dp)
+                                    )
+                                    .padding(14.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                        Icons.AutoMirrored.Filled.Notes,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(16.dp)
+                                    Icons.AutoMirrored.Filled.Notes,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                        "Note / Memo",
-                                        style =
-                                                MaterialTheme.typography.bodyMedium.copy(
-                                                        fontWeight = FontWeight.Bold
-                                                ),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    "Note / Memo",
+                                    style =
+                                        MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                             Spacer(modifier = Modifier.height(6.dp))
                             Text(
-                                    detailsTx.note,
-                                    style =
-                                            MaterialTheme.typography.bodySmall.copy(
-                                                    fontStyle =
-                                                            androidx.compose.ui.text.font.FontStyle
-                                                                    .Italic
-                                            ),
-                                    color = MaterialTheme.colorScheme.onSurface
+                                detailsTx.note,
+                                style =
+                                    MaterialTheme.typography.bodySmall.copy(
+                                        fontStyle =
+                                            androidx.compose.ui.text.font.FontStyle
+                                                .Italic
+                                    ),
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                         }
                     }
@@ -765,15 +747,15 @@ fun MainContainerScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Button(
-                            onClick = { selectedTransactionForDetails = null },
-                            modifier = Modifier.fillMaxWidth().height(48.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors =
-                                    ButtonDefaults.buttonColors(
-                                            containerColor =
-                                                    if (isIncome) IncomeGreen else ExpenseRed,
-                                            contentColor = Color.White
-                                    )
+                        onClick = { selectedTransactionForDetails = null },
+                        modifier = Modifier.fillMaxWidth().height(48.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors =
+                            ButtonDefaults.buttonColors(
+                                containerColor =
+                                    if (isIncome) IncomeGreen else ExpenseRed,
+                                contentColor = Color.White
+                            )
                     ) { Text("Close", fontWeight = FontWeight.Bold) }
                 }
             }
@@ -784,65 +766,65 @@ fun MainContainerScreen(
     if (menuTx != null) {
         val sheetState = rememberModalBottomSheetState()
         ModalBottomSheet(
-                onDismissRequest = { selectedTransactionForMenu = null },
-                modifier = Modifier.widthIn(max = 560.dp),
-                sheetState = sheetState,
-                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 12.dp
+            onDismissRequest = { selectedTransactionForMenu = null },
+            modifier = Modifier.widthIn(max = 560.dp),
+            sheetState = sheetState,
+            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 12.dp
         ) {
             Column(
-                    modifier =
-                            Modifier.fillMaxWidth()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 24.dp, vertical = 8.dp)
-                                    .padding(bottom = 28.dp)
+                modifier =
+                    Modifier.fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                        .padding(bottom = 28.dp)
             ) {
                 val isIncome = menuTx.type == TransactionType.INCOME
                 val amountColor = if (isIncome) IncomeGreen else ExpenseRed
 
                 Text(
-                        text = "Transaction Options",
-                        style =
-                                MaterialTheme.typography.titleMedium.copy(
-                                        fontWeight = FontWeight.Bold
-                                ),
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.padding(bottom = 12.dp)
+                    text = "Transaction Options",
+                    style =
+                        MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold
+                        ),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(bottom = 12.dp)
                 )
 
                 // Transaction Summary Card Preview
                 Row(
-                        modifier =
-                                Modifier.fillMaxWidth()
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .background(
-                                                MaterialTheme.colorScheme.surfaceVariant.copy(
-                                                        alpha = 0.7f
-                                                )
-                                        )
-                                        .border(
-                                                1.5.dp,
-                                                MaterialTheme.colorScheme.outline.copy(
-                                                        alpha = 0.6f
-                                                ),
-                                                RoundedCornerShape(20.dp)
-                                        )
-                                        .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    modifier =
+                        Modifier.fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(
+                                MaterialTheme.colorScheme.surfaceVariant.copy(
+                                    alpha = 0.7f
+                                )
+                            )
+                            .border(
+                                1.5.dp,
+                                MaterialTheme.colorScheme.outline.copy(
+                                    alpha = 0.6f
+                                ),
+                                RoundedCornerShape(20.dp)
+                            )
+                            .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
-                            modifier =
-                                    Modifier.size(46.dp)
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(amountColor.copy(alpha = 0.12f)),
-                            contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier.size(46.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(amountColor.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                                imageVector = getCategoryIcon(menuTx.category),
-                                contentDescription = menuTx.title,
-                                tint = amountColor,
-                                modifier = Modifier.size(22.dp)
+                            imageVector = getCategoryIcon(menuTx.category),
+                            contentDescription = menuTx.title,
+                            tint = amountColor,
+                            modifier = Modifier.size(22.dp)
                         )
                     }
 
@@ -850,34 +832,34 @@ fun MainContainerScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                                text = menuTx.title,
-                                style =
-                                        MaterialTheme.typography.bodyLarge.copy(
-                                                fontWeight = FontWeight.Bold
-                                        ),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1
+                            text = menuTx.title,
+                            style =
+                                MaterialTheme.typography.bodyLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                                text =
-                                        "${menuTx.accountName} • ${formatRelativeTime(menuTx.timestamp)}",
-                                style =
-                                        MaterialTheme.typography.bodySmall.copy(
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        ),
-                                maxLines = 1
+                            text =
+                                "${menuTx.accountName} • ${formatRelativeTime(menuTx.timestamp)}",
+                            style =
+                                MaterialTheme.typography.bodySmall.copy(
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                ),
+                            maxLines = 1
                         )
                     }
 
                     Text(
-                            text =
-                                    "${if (isIncome) "+" else "-"}$currency${String.format(java.util.Locale.US, "%.2f", menuTx.amount)}",
-                            style =
-                                    MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.Bold
-                                    ),
-                            color = amountColor
+                        text =
+                            "${if (isIncome) "+" else "-"}$currency${String.format(java.util.Locale.US, "%.2f", menuTx.amount)}",
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                        color = amountColor
                     )
                 }
 
@@ -885,43 +867,43 @@ fun MainContainerScreen(
 
                 // Action Tile 1: View Details
                 TransactionOptionTile(
-                        label = "View Details",
-                        subtitle = "Inspect full transaction summary & timestamps",
-                        icon = Icons.Default.Info,
-                        tint = MaterialTheme.colorScheme.primary,
-                        onClick = {
-                            selectedTransactionForDetails = menuTx
-                            selectedTransactionForMenu = null
-                        }
+                    label = "View Details",
+                    subtitle = "Inspect full transaction summary & timestamps",
+                    icon = Icons.Default.Info,
+                    tint = MaterialTheme.colorScheme.primary,
+                    onClick = {
+                        selectedTransactionForDetails = menuTx
+                        selectedTransactionForMenu = null
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Action Tile 2: Edit Transaction
                 TransactionOptionTile(
-                        label = "Edit Transaction",
-                        subtitle = "Modify amount, category, or note",
-                        icon = Icons.Default.Edit,
-                        tint = MaterialTheme.colorScheme.primary,
-                        onClick = {
-                            transactionToEdit = menuTx
-                            selectedTransactionForMenu = null
-                        }
+                    label = "Edit Transaction",
+                    subtitle = "Modify amount, category, or note",
+                    icon = Icons.Default.Edit,
+                    tint = MaterialTheme.colorScheme.primary,
+                    onClick = {
+                        transactionToEdit = menuTx
+                        selectedTransactionForMenu = null
+                    }
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
                 // Action Tile 3: Delete Transaction (Destructive)
                 TransactionOptionTile(
-                        label = "Delete Transaction",
-                        subtitle = "Permanently remove and update wallet balance",
-                        icon = Icons.Default.Delete,
-                        tint = ExpenseRed,
-                        isDestructive = true,
-                        onClick = {
-                            transactionToDelete = menuTx
-                            selectedTransactionForMenu = null
-                        }
+                    label = "Delete Transaction",
+                    subtitle = "Permanently remove and update wallet balance",
+                    icon = Icons.Default.Delete,
+                    tint = ExpenseRed,
+                    isDestructive = true,
+                    onClick = {
+                        transactionToDelete = menuTx
+                        selectedTransactionForMenu = null
+                    }
                 )
             }
         }
@@ -930,17 +912,17 @@ fun MainContainerScreen(
     val deleteTx = transactionToDelete
     if (deleteTx != null) {
         FlowCashConfirmDialog(
-                onDismissRequest = { transactionToDelete = null },
-                title = "Delete Transaction?",
-                message =
-                        "Are you sure you want to permanently delete this transaction? This action will adjust the balance of your account.",
-                icon = Icons.Default.DeleteForever,
-                isDestructive = true,
-                confirmButtonText = "Delete",
-                onConfirm = {
-                    dashboardViewModel.deleteTransaction(deleteTx.id)
-                    transactionToDelete = null
-                }
+            onDismissRequest = { transactionToDelete = null },
+            title = "Delete Transaction?",
+            message =
+                "Are you sure you want to permanently delete this transaction? This action will adjust the balance of your account.",
+            icon = Icons.Default.DeleteForever,
+            isDestructive = true,
+            confirmButtonText = "Delete",
+            onConfirm = {
+                dashboardViewModel.deleteTransaction(deleteTx.id)
+                transactionToDelete = null
+            }
         )
     }
 
@@ -948,37 +930,37 @@ fun MainContainerScreen(
     if (editTx != null) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         ModalBottomSheet(
-                onDismissRequest = { transactionToEdit = null },
-                sheetState = sheetState,
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 8.dp
+            onDismissRequest = { transactionToEdit = null },
+            sheetState = sheetState,
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
         ) {
             AddTransactionSheetContent(
-                    initialType = editTx.type,
-                    initialAccountName = editTx.accountName,
-                    currencySymbol = currency,
-                    accountsList = accounts,
-                    transactionToEdit = editTx,
-                    onAdd = { title, amt, type, category, accountName, note, customCategory ->
-                        dashboardViewModel.updateTransaction(
-                                id = editTx.id,
-                                title = title,
-                                amount = amt,
-                                type = type,
-                                category = category,
-                                accountName = accountName,
-                                note = note,
-                                subtitle =
-                                        if (category == CategoryType.OTHER &&
-                                                        !customCategory.isNullOrBlank()
-                                        )
-                                                customCategory
-                                        else "Manual entry",
-                                createdAt = editTx.createdAt,
-                                timestamp = editTx.timestamp
-                        )
-                        transactionToEdit = null
-                    }
+                initialType = editTx.type,
+                initialAccountName = editTx.accountName,
+                currencySymbol = currency,
+                accountsList = accounts,
+                transactionToEdit = editTx,
+                onAdd = { title, amt, type, category, accountName, note, customCategory ->
+                    dashboardViewModel.updateTransaction(
+                        id = editTx.id,
+                        title = title,
+                        amount = amt,
+                        type = type,
+                        category = category,
+                        accountName = accountName,
+                        note = note,
+                        subtitle =
+                            if (category == CategoryType.OTHER &&
+                                !customCategory.isNullOrBlank()
+                            )
+                                customCategory
+                            else "Manual entry",
+                        createdAt = editTx.createdAt,
+                        timestamp = editTx.timestamp
+                    )
+                    transactionToEdit = null
+                }
             )
         }
     }
@@ -986,76 +968,76 @@ fun MainContainerScreen(
 
 @Composable
 fun AddTransactionSheetContent(
-        initialType: TransactionType = TransactionType.INCOME,
-        initialAccountName: String? = null,
-        currencySymbol: String = "$",
-        accountsList: List<AccountEntity> = emptyList(),
-        transactionToEdit: TransactionItem? = null,
-        onAdd:
-                (
-                        title: String,
-                        amount: Double,
-                        type: TransactionType,
-                        category: CategoryType,
-                        account: String,
-                        note: String?,
-                        customCategory: String?) -> Unit
+    initialType: TransactionType = TransactionType.INCOME,
+    initialAccountName: String? = null,
+    currencySymbol: String = "$",
+    accountsList: List<AccountEntity> = emptyList(),
+    transactionToEdit: TransactionItem? = null,
+    onAdd:
+        (
+        title: String,
+        amount: Double,
+        type: TransactionType,
+        category: CategoryType,
+        account: String,
+        note: String?,
+        customCategory: String?) -> Unit
 ) {
     var selectedType by
-            rememberSaveable(initialType, transactionToEdit) {
-                mutableStateOf(transactionToEdit?.type ?: initialType)
-            }
+    rememberSaveable(initialType, transactionToEdit) {
+        mutableStateOf(transactionToEdit?.type ?: initialType)
+    }
     var title by
-            rememberSaveable(transactionToEdit) { mutableStateOf(transactionToEdit?.title ?: "") }
+    rememberSaveable(transactionToEdit) { mutableStateOf(transactionToEdit?.title ?: "") }
     var amountText by
-            rememberSaveable(transactionToEdit) {
-                mutableStateOf(transactionToEdit?.amount?.toString() ?: "")
-            }
+    rememberSaveable(transactionToEdit) {
+        mutableStateOf(transactionToEdit?.amount?.toString() ?: "")
+    }
     var selectedCategory by
-            rememberSaveable(transactionToEdit) {
-                mutableStateOf(transactionToEdit?.category ?: CategoryType.SALARY)
-            }
+    rememberSaveable(transactionToEdit) {
+        mutableStateOf(transactionToEdit?.category ?: CategoryType.SALARY)
+    }
     LaunchedEffect(selectedType) {
         if (!selectedCategory.isApplicableTo(selectedType)) {
             selectedCategory =
-                    if (selectedType == TransactionType.INCOME) CategoryType.SALARY
-                    else CategoryType.SHOPPING
+                if (selectedType == TransactionType.INCOME) CategoryType.SALARY
+                else CategoryType.SHOPPING
         }
     }
     var customCategoryText by
-            rememberSaveable(transactionToEdit) {
-                mutableStateOf(
-                        if (transactionToEdit?.category == CategoryType.OTHER)
-                                transactionToEdit.subtitle
-                        else ""
-                )
-            }
+    rememberSaveable(transactionToEdit) {
+        mutableStateOf(
+            if (transactionToEdit?.category == CategoryType.OTHER)
+                transactionToEdit.subtitle
+            else ""
+        )
+    }
     var amountError by remember { mutableStateOf<String?>(null) }
     var titleError by remember { mutableStateOf<String?>(null) }
 
     val defaultAccount =
-            remember(initialAccountName, accountsList, transactionToEdit) {
-                if (transactionToEdit != null) {
-                    transactionToEdit.accountName
-                } else {
-                    val matchedAccount =
-                            if (!initialAccountName.isNullOrBlank()) {
-                                accountsList.find { it.name == initialAccountName }
-                            } else {
-                                null
-                            }
-                    matchedAccount?.name ?: accountsList.firstOrNull()?.name ?: "Main Wallet"
-                }
+        remember(initialAccountName, accountsList, transactionToEdit) {
+            if (transactionToEdit != null) {
+                transactionToEdit.accountName
+            } else {
+                val matchedAccount =
+                    if (!initialAccountName.isNullOrBlank()) {
+                        accountsList.find { it.name == initialAccountName }
+                    } else {
+                        null
+                    }
+                matchedAccount?.name ?: accountsList.firstOrNull()?.name ?: "Main Wallet"
             }
+        }
     var selectedAccount by rememberSaveable(defaultAccount) { mutableStateOf(defaultAccount) }
     var noteText by
-            rememberSaveable(transactionToEdit) { mutableStateOf(transactionToEdit?.note ?: "") }
+    rememberSaveable(transactionToEdit) { mutableStateOf(transactionToEdit?.note ?: "") }
     var dropdownExpanded by remember { mutableStateOf(false) }
 
     val selectedAccountType =
-            remember(selectedAccount, accountsList) {
-                accountsList.find { it.name == selectedAccount }?.accountType ?: "CASH_WALLET"
-            }
+        remember(selectedAccount, accountsList) {
+            accountsList.find { it.name == selectedAccount }?.accountType ?: "CASH_WALLET"
+        }
 
     Column(
         modifier = Modifier
@@ -1103,7 +1085,9 @@ fun AddTransactionSheetContent(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))        // 1. Transaction Type Segmented Toggle (Income & Expense) with Bounded Height & Smooth Spring Liquid Glide
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // 1. Transaction Type Segmented Toggle (Income & Expense)
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1121,7 +1105,7 @@ fun AddTransactionSheetContent(
             val animatedIndex by animateFloatAsState(
                 targetValue = targetIndex,
                 animationSpec = spring(
-                    dampingRatio = 0.65f, // organic liquid spring glide
+                    dampingRatio = 0.65f,
                     stiffness = Spring.StiffnessLow
                 ),
                 label = "TabSwitchIndex"
@@ -1135,7 +1119,6 @@ fun AddTransactionSheetContent(
 
             val indicatorOffset = tabWidth * animatedIndex
 
-            // Animated sliding chip pill (darker rich tinted fill + 1.5.dp solid border)
             Box(
                 modifier = Modifier
                     .offset(x = indicatorOffset)
@@ -1146,13 +1129,11 @@ fun AddTransactionSheetContent(
                     .border(1.5.dp, animatedColor, RoundedCornerShape(14.dp))
             )
 
-            // Text-only interactive Tab Options
             Row(
                 modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Income Tab Option
                 Box(
                     modifier = Modifier
                         .width(tabWidth)
@@ -1172,7 +1153,6 @@ fun AddTransactionSheetContent(
                     )
                 }
 
-                // Expense Tab Option
                 Box(
                     modifier = Modifier
                         .width(tabWidth)
@@ -1263,15 +1243,15 @@ fun AddTransactionSheetContent(
 
         // 4. Category Horizontal Row Selector
         Text(
-                text = "Category",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+            text = "Category",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         val filteredCategories =
-                remember(selectedType) {
-                    CategoryType.entries.filter { it.isApplicableTo(selectedType) }
-                }
+            remember(selectedType) {
+                CategoryType.entries.filter { it.isApplicableTo(selectedType) }
+            }
 
         val categoryLazyState = androidx.compose.foundation.lazy.rememberLazyListState()
         LaunchedEffect(selectedCategory, filteredCategories) {
@@ -1282,76 +1262,71 @@ fun AddTransactionSheetContent(
         }
 
         LazyRow(
-                state = categoryLazyState,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 4.dp)
+            state = categoryLazyState,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(vertical = 4.dp)
         ) {
             items(filteredCategories) { category ->
                 val isSelected = selectedCategory == category
                 Box(
-                        modifier =
-                                Modifier.clip(RoundedCornerShape(12.dp))
-                                        .background(
-                                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
-                                                else
-                                                        MaterialTheme.colorScheme.surfaceVariant
-                                                                .copy(alpha = 0.35f)
-                                        )
-                                        .border(
-                                                width = if (isSelected) 1.5.dp else 1.dp,
-                                                color = if (isSelected) MaterialTheme.colorScheme.primary
-                                                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
-                                                shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .clickable { selectedCategory = category }
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                    modifier =
+                        Modifier.clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                        .copy(alpha = 0.35f)
+                            )
+                            .border(
+                                width = if (isSelected) 1.5.dp else 1.dp,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .clickable { selectedCategory = category }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(
-                                imageVector = getCategoryIcon(category),
-                                contentDescription = category.name,
-                                tint =
-                                        if (isSelected) MaterialTheme.colorScheme.onSurface
-                                        else MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(16.dp)
+                            imageVector = getCategoryIcon(category),
+                            contentDescription = category.name,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                                text =
-                                        category.name.lowercase().replaceFirstChar {
-                                            it.uppercase()
-                                        },
-                                style =
-                                        MaterialTheme.typography.bodySmall.copy(
-                                                fontWeight =
-                                                        if (isSelected) FontWeight.Bold
-                                                        else FontWeight.Normal,
-                                                color =
-                                                        if (isSelected) MaterialTheme.colorScheme.onSurface
-                                                        else MaterialTheme.colorScheme.onSurface
-                                        )
+                            text =
+                                category.name.lowercase().replaceFirstChar {
+                                    it.uppercase()
+                                },
+                            style =
+                                MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight =
+                                        if (isSelected) FontWeight.Bold
+                                        else FontWeight.Normal,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                         )
                     }
                 }
             }
         }
 
-        // Custom Category text field shown if OTHER is selected
         if (selectedCategory == CategoryType.OTHER) {
             Spacer(modifier = Modifier.height(12.dp))
             OutlinedTextField(
-                    value = customCategoryText,
-                    onValueChange = { customCategoryText = it },
-                    label = { Text("Custom Category Name") },
-                    placeholder = { Text("e.g. Gift, Tax, Dividends") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(18.dp),
-                    colors =
-                            OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            ),
-                    modifier = Modifier.fillMaxWidth()
+                value = customCategoryText,
+                onValueChange = { customCategoryText = it },
+                label = { Text("Custom Category Name") },
+                placeholder = { Text("e.g. Gift, Tax, Dividends") },
+                singleLine = true,
+                shape = RoundedCornerShape(18.dp),
+                colors =
+                    OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    ),
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
@@ -1359,75 +1334,75 @@ fun AddTransactionSheetContent(
 
         // 5. Account Dropdown Selector
         Text(
-                text = "Account / Wallet",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+            text = "Account / Wallet",
+            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         Box(
-                modifier =
-                        Modifier.fillMaxWidth()
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                                )
-                                .border(
-                                        1.5.dp,
-                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                                        RoundedCornerShape(18.dp)
-                                )
-                                .clickable { dropdownExpanded = true }
-                                .padding(horizontal = 16.dp, vertical = 14.dp)
+            modifier =
+                Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    )
+                    .border(
+                        1.5.dp,
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        RoundedCornerShape(18.dp)
+                    )
+                    .clickable { dropdownExpanded = true }
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                            modifier =
-                                    Modifier.size(36.dp)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(
-                                                    MaterialTheme.colorScheme.primary.copy(
-                                                            alpha = 0.12f
-                                                    )
-                                            ),
-                            contentAlignment = Alignment.Center
+                        modifier =
+                            Modifier.size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    MaterialTheme.colorScheme.primary.copy(
+                                        alpha = 0.12f
+                                    )
+                                ),
+                        contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                                imageVector = getLocalAccountTypeIcon(selectedAccountType),
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
+                            imageVector = getLocalAccountTypeIcon(selectedAccountType),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                                text = selectedAccount,
-                                style =
-                                        MaterialTheme.typography.bodyMedium.copy(
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                        )
+                            text = selectedAccount,
+                            style =
+                                MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
                         )
                         Text(
-                                text = selectedAccountType.replace("_", " "),
-                                style =
-                                        MaterialTheme.typography.labelSmall.copy(
-                                                color =
-                                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                                                .copy(alpha = 0.75f)
-                                        )
+                            text = selectedAccountType.replace("_", " "),
+                            style =
+                                MaterialTheme.typography.labelSmall.copy(
+                                    color =
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                            .copy(alpha = 0.75f)
+                                )
                         )
                     }
                 }
                 Icon(
-                        imageVector = Icons.Default.ArrowDropDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -1448,75 +1423,75 @@ fun AddTransactionSheetContent(
                 accountsList.forEach { account ->
                     val isAccSelected = account.name == selectedAccount
                     DropdownMenuItem(
-                            text = {
-                                Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                            text = account.name,
-                                            style =
-                                                    MaterialTheme.typography.bodyMedium.copy(
-                                                            fontWeight =
-                                                                    if (isAccSelected)
-                                                                            FontWeight.Bold
-                                                                    else FontWeight.Medium,
-                                                            color =
-                                                                    if (isAccSelected)
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .primary
-                                                                    else
-                                                                            MaterialTheme
-                                                                                    .colorScheme
-                                                                                    .onSurface
-                                                    )
-                                    )
-                                    if (isAccSelected) {
-                                        Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = "Selected",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(16.dp)
+                        text = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = account.name,
+                                    style =
+                                        MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight =
+                                                if (isAccSelected)
+                                                    FontWeight.Bold
+                                                else FontWeight.Medium,
+                                            color =
+                                                if (isAccSelected)
+                                                    MaterialTheme
+                                                        .colorScheme
+                                                        .primary
+                                                else
+                                                    MaterialTheme
+                                                        .colorScheme
+                                                        .onSurface
                                         )
-                                    }
-                                }
-                            },
-                            onClick = {
-                                selectedAccount = account.name
-                                dropdownExpanded = false
-                            },
-                            leadingIcon = {
-                                Box(
-                                        modifier =
-                                                Modifier.size(32.dp)
-                                                        .clip(RoundedCornerShape(8.dp))
-                                                        .background(
-                                                                if (isAccSelected)
-                                                                        MaterialTheme.colorScheme
-                                                                                .primary.copy(
-                                                                                alpha = 0.15f
-                                                                        )
-                                                                else
-                                                                        MaterialTheme.colorScheme
-                                                                                .surfaceVariant
-                                                                                .copy(alpha = 0.5f)
-                                                        ),
-                                        contentAlignment = Alignment.Center
-                                ) {
+                                )
+                                if (isAccSelected) {
                                     Icon(
-                                            imageVector =
-                                                    getLocalAccountTypeIcon(account.accountType),
-                                            contentDescription = null,
-                                            tint =
-                                                    if (isAccSelected)
-                                                            MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(16.dp)
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
+                        },
+                        onClick = {
+                            selectedAccount = account.name
+                            dropdownExpanded = false
+                        },
+                        leadingIcon = {
+                            Box(
+                                modifier =
+                                    Modifier.size(32.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            if (isAccSelected)
+                                                MaterialTheme.colorScheme
+                                                    .primary.copy(
+                                                        alpha = 0.15f
+                                                    )
+                                            else
+                                                MaterialTheme.colorScheme
+                                                    .surfaceVariant
+                                                    .copy(alpha = 0.5f)
+                                        ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector =
+                                        getLocalAccountTypeIcon(account.accountType),
+                                    contentDescription = null,
+                                    tint =
+                                        if (isAccSelected)
+                                            MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     )
                 }
             }
@@ -1526,80 +1501,80 @@ fun AddTransactionSheetContent(
 
         // 6. Note Input
         OutlinedTextField(
-                value = noteText,
-                onValueChange = { noteText = it },
-                label = { Text("Note / Memo (Optional)") },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Notes,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                },
-                singleLine = true,
-                shape = RoundedCornerShape(18.dp),
-                colors =
-                        OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        ),
-                modifier = Modifier.fillMaxWidth()
+            value = noteText,
+            onValueChange = { noteText = it },
+            label = { Text("Note / Memo (Optional)") },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Notes,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(18.dp),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                ),
+            modifier = Modifier.fillMaxWidth()
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
         // 7. Save Action Button
         Button(
-                onClick = {
-                    val amt = amountText.toDoubleOrNull() ?: 0.0
-                    var hasError = false
+            onClick = {
+                val amt = amountText.toDoubleOrNull() ?: 0.0
+                var hasError = false
 
-                    if (amountText.isBlank()) {
-                        amountError = "Amount is required"
-                        hasError = true
-                    } else if (amt <= 0.0) {
-                        amountError = "Amount must be greater than 0"
-                        hasError = true
-                    } else {
-                        amountError = null
-                    }
+                if (amountText.isBlank()) {
+                    amountError = "Amount is required"
+                    hasError = true
+                } else if (amt <= 0.0) {
+                    amountError = "Amount must be greater than 0"
+                    hasError = true
+                } else {
+                    amountError = null
+                }
 
-                    if (title.isBlank()) {
-                        titleError = "Description / Merchant is required"
-                        hasError = true
-                    } else {
-                        titleError = null
-                    }
+                if (title.isBlank()) {
+                    titleError = "Description / Merchant is required"
+                    hasError = true
+                } else {
+                    titleError = null
+                }
 
-                    if (!hasError) {
-                        onAdd(
-                                title,
-                                amt,
-                                selectedType,
-                                selectedCategory,
-                                selectedAccount,
-                                noteText.ifBlank { null },
-                                if (selectedCategory == CategoryType.OTHER)
-                                        customCategoryText.ifBlank { null }
-                                else null
-                        )
-                    }
-                },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors =
-                        ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                        )
+                if (!hasError) {
+                    onAdd(
+                        title,
+                        amt,
+                        selectedType,
+                        selectedCategory,
+                        selectedAccount,
+                        noteText.ifBlank { null },
+                        if (selectedCategory == CategoryType.OTHER)
+                            customCategoryText.ifBlank { null }
+                        else null
+                    )
+                }
+            },
+            modifier = Modifier.fillMaxWidth().height(52.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors =
+                ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
         ) {
             Text(
-                    text = if (transactionToEdit != null) "Update Transaction" else "Save Transaction",
-                    style =
-                            MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                            )
+                text = if (transactionToEdit != null) "Update Transaction" else "Save Transaction",
+                style =
+                    MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
             )
         }
 
@@ -1621,48 +1596,48 @@ fun getLocalAccountTypeIcon(type: String): ImageVector {
 
 @Composable
 private fun TransactionOptionTile(
-        label: String,
-        subtitle: String,
-        icon: ImageVector,
-        tint: Color,
-        isDestructive: Boolean = false,
-        onClick: () -> Unit
+    label: String,
+    subtitle: String,
+    icon: ImageVector,
+    tint: Color,
+    isDestructive: Boolean = false,
+    onClick: () -> Unit
 ) {
     val containerColor =
-            if (isDestructive) {
-                ExpenseRed.copy(alpha = 0.14f)
-            } else {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-            }
+        if (isDestructive) {
+            ExpenseRed.copy(alpha = 0.14f)
+        } else {
+            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+        }
     val borderColor =
-            if (isDestructive) {
-                ExpenseRed.copy(alpha = 0.5f)
-            } else {
-                MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
-            }
+        if (isDestructive) {
+            ExpenseRed.copy(alpha = 0.5f)
+        } else {
+            MaterialTheme.colorScheme.outline.copy(alpha = 0.6f)
+        }
 
     Row(
-            modifier =
-                    Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(containerColor)
-                            .border(1.5.dp, borderColor, RoundedCornerShape(18.dp))
-                            .clickable(onClick = onClick)
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
+        modifier =
+            Modifier.fillMaxWidth()
+                .clip(RoundedCornerShape(18.dp))
+                .background(containerColor)
+                .border(1.5.dp, borderColor, RoundedCornerShape(18.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-                modifier =
-                        Modifier.size(40.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(tint.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
+            modifier =
+                Modifier.size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(tint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
-                    imageVector = icon,
-                    contentDescription = label,
-                    tint = tint,
-                    modifier = Modifier.size(20.dp)
+                imageVector = icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(20.dp)
             )
         }
 
@@ -1670,33 +1645,33 @@ private fun TransactionOptionTile(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                    text = label,
-                    style =
-                            MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color =
-                                            if (isDestructive) ExpenseRed
-                                            else MaterialTheme.colorScheme.onSurface
-                            )
+                text = label,
+                style =
+                    MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color =
+                            if (isDestructive) ExpenseRed
+                            else MaterialTheme.colorScheme.onSurface
+                    )
             )
             Text(
-                    text = subtitle,
-                    style =
-                            MaterialTheme.typography.bodySmall.copy(
-                                    color =
-                                            if (isDestructive) ExpenseRed.copy(alpha = 0.75f)
-                                            else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                text = subtitle,
+                style =
+                    MaterialTheme.typography.bodySmall.copy(
+                        color =
+                            if (isDestructive) ExpenseRed.copy(alpha = 0.75f)
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
             )
         }
 
         Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                contentDescription = null,
-                tint =
-                        if (isDestructive) ExpenseRed.copy(alpha = 0.6f)
-                        else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.size(18.dp)
+            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+            contentDescription = null,
+            tint =
+                if (isDestructive) ExpenseRed.copy(alpha = 0.6f)
+                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+            modifier = Modifier.size(18.dp)
         )
     }
 }
