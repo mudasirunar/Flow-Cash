@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -27,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 
@@ -60,7 +60,7 @@ fun TransactionFab(
 
     // 2. Corner Morphing
     val cornerRadius by animateDpAsState(
-        targetValue = if (isPressed) 26.dp else 16.dp,
+        targetValue = if (isPressed) 24.dp else 18.dp,
         animationSpec = spring(stiffness = Spring.StiffnessLow),
         label = "CornerMorph"
     )
@@ -85,17 +85,20 @@ fun TransactionFab(
     ) {
         Box(
             modifier = Modifier
-                .shadow(
-                    elevation = if (isPressed) 2.dp else 6.dp,
-                    shape = RoundedCornerShape(cornerRadius)
-                )
                 .graphicsLayer {
                     scaleX = squishX
                     scaleY = squishY
                 }
                 .size(56.dp)
                 .clip(RoundedCornerShape(cornerRadius))
-                .background(MaterialTheme.colorScheme.primary)
+                // Glass-tinted background (matches app surface variant & primary tint for high visibility)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.22f))
+                // 1.5.dp Solid Primary Border
+                .border(
+                    width = 1.5.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                    shape = RoundedCornerShape(cornerRadius)
+                )
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -106,7 +109,7 @@ fun TransactionFab(
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = "Add Transaction",
-                tint = MaterialTheme.colorScheme.onPrimary,
+                tint = MaterialTheme.colorScheme.primary, // Primary color matching border
                 modifier = Modifier
                     .size(26.dp)
                     .graphicsLayer {
