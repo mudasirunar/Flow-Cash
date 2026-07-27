@@ -1040,14 +1040,6 @@ private fun EmptyAccountsCard(
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
-                .size(240.dp, 100.dp)
-                .blur(50.dp)
-                .background(Brush.radialGradient(colors = listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), Color.Transparent)))
-        )
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
                 .widthIn(max = 360.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
@@ -1060,6 +1052,7 @@ private fun EmptyAccountsCard(
                     )
                 )
                 .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .clickable(onClick = onAddAccountClick)
                 .padding(22.dp)
         ) {
@@ -1141,19 +1134,12 @@ private fun OverviewCard(
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
-                .size(240.dp, 100.dp)
-                .blur(50.dp)
-                .background(Brush.radialGradient(colors = listOf(PrimaryIndigo.copy(alpha = 0.3f), Color.Transparent)))
-        )
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
                 .widthIn(max = 360.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(PrimaryIndigo, PrimaryIndigo.copy(alpha = 0.8f))))
                 .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .clickable(onClick = onClick)
                 .padding(22.dp)
         ) {
@@ -1226,24 +1212,14 @@ private fun SelectedAccountCard(
 
     Box(modifier = Modifier.fillMaxWidth()) {
         Box(
-            modifier = Modifier.align(Alignment.Center).size(240.dp, 100.dp).blur(50.dp)
-                .background(Brush.radialGradient(colors = listOf(endColor.copy(alpha = 0.3f), Color.Transparent)))
-        )
-
-        Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .widthIn(max = 360.dp)
                 .fillMaxWidth()
-                .shadow(
-                    elevation = 20.dp,
-                    shape = RoundedCornerShape(24.dp),
-                    ambientColor = endColor,
-                    spotColor = endColor
-                )
                 .clip(RoundedCornerShape(24.dp))
                 .background(Brush.linearGradient(listOf(startColor, endColor)))
                 .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(24.dp))
                 .clickable { onEditClick() }
                 .padding(18.dp)
         ) {
@@ -1560,24 +1536,10 @@ private fun AddCardPlaceholder(
                 ),
                 shape = RoundedCornerShape(22.dp)
             )
+            .clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick)
             .padding(22.dp)
     ) {
-        // Blur Glow
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(160.dp, 80.dp)
-                .blur(40.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
 
         Column(
             modifier = Modifier
