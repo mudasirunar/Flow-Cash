@@ -56,3 +56,5 @@ Ehthumbs.db
 # Local agent & documentation folders
 /.agents
 /docs
+/project_docs
+
