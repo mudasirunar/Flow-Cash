@@ -135,12 +135,11 @@ fun AddAccountScreen(
     var selectedType by rememberSaveable(accountToEdit?.id) { mutableStateOf(initialType) }
     var selectedNetwork by rememberSaveable(accountToEdit?.id) { mutableStateOf(accountToEdit?.network?.ifEmpty { "VISA" } ?: "VISA") }
     var cardNumber by rememberSaveable(accountToEdit?.id) { mutableStateOf(accountToEdit?.cardNumber ?: "") }
-    var rawExpiryDigits by rememberSaveable(accountToEdit?.id) { mutableStateOf(accountToEdit?.expiryDate?.filter { it.isDigit() } ?: "") }
     var selectedTemplateIndex by rememberSaveable(accountToEdit?.id) { mutableStateOf(initialTemplateIndex) }
 
     val hasChanges = remember(
         accountName, holderName, selectedType, customTypeName,
-        selectedNetwork, cardNumber, rawExpiryDigits, selectedTemplateIndex, accountToEdit
+        selectedNetwork, cardNumber, selectedTemplateIndex, accountToEdit
     ) {
         val initialName = accountToEdit?.name ?: ""
         val initialHolder = accountToEdit?.holderName ?: ""
@@ -151,7 +150,6 @@ fun AddAccountScreen(
         
         val initialNetwork = accountToEdit?.network?.ifEmpty { "VISA" } ?: "VISA"
         val initialCardNumber = accountToEdit?.cardNumber ?: ""
-        val initialRawExpiry = accountToEdit?.expiryDate?.filter { it.isDigit() } ?: ""
         
         val initialTemplateIdx = CARD_TEMPLATES.indexOfFirst { it.startHex == accountToEdit?.cardColorStart }.coerceAtLeast(0)
 
@@ -161,8 +159,7 @@ fun AddAccountScreen(
         (selectedType == "OTHER" && customTypeName != initialCustomTypeName) ||
         (selectedType == "CARD" && (
             selectedNetwork != initialNetwork ||
-            cardNumber != initialCardNumber ||
-            rawExpiryDigits != initialRawExpiry
+            cardNumber != initialCardNumber
         )) ||
         selectedTemplateIndex != initialTemplateIdx
     }
@@ -222,14 +219,11 @@ fun AddAccountScreen(
     var cardNumberTouched by rememberSaveable(accountToEdit?.id) { mutableStateOf(false) }
     var cardNumberHasFocus by rememberSaveable(accountToEdit?.id) { mutableStateOf(false) }
 
-    var expiryTouched by rememberSaveable(accountToEdit?.id) { mutableStateOf(false) }
-    var expiryHasFocus by rememberSaveable(accountToEdit?.id) { mutableStateOf(false) }
-
     val isCardType = selectedType == "CARD"
     val isOtherType = selectedType == "OTHER"
     val isFormValid = accountName.isNotBlank() &&
             (!isOtherType || customTypeName.isNotBlank()) &&
-            (!isCardType || (cardNumber.length == 16 && rawExpiryDigits.length == 4))
+            (!isCardType || cardNumber.length == 16)
     val isSaveEnabled = isFormValid && (!isEditMode || hasChanges)
     val currentTemplate = CARD_TEMPLATES[selectedTemplateIndex]
 
@@ -241,18 +235,8 @@ fun AddAccountScreen(
         selectedType
     }
 
-    // Format raw 4 digits into MM/YY strictly for display on the Live Card Preview
-    val previewFormattedExpiry = remember(rawExpiryDigits) {
-        if (rawExpiryDigits.length >= 3) {
-            "${rawExpiryDigits.take(2)}/${rawExpiryDigits.drop(2)}"
-        } else {
-            rawExpiryDigits
-        }
-    }
-
     // Errors evaluate only when the field has lost focus
     val isCardNumberError = isCardType && cardNumberTouched && !cardNumberHasFocus && cardNumber.length < 16
-    val isExpiryError = isCardType && expiryTouched && !expiryHasFocus && rawExpiryDigits.length < 4
 
     Scaffold(
         topBar = {
@@ -298,7 +282,7 @@ fun AddAccountScreen(
                     accountType = resolvedAccountTypeLabel,
                     network = if (isCardType) selectedNetwork else "NONE",
                     cardNumber = if (isCardType) cardNumber else "",
-                    expiryDate = if (isCardType) previewFormattedExpiry else "",
+                    expiryDate = accountToEdit?.expiryDate ?: "",
                     cardColorStart = currentTemplate.startHex,
                     cardColorEnd = currentTemplate.endHex,
                     createdAt = accountToEdit?.createdAt ?: System.currentTimeMillis(),
@@ -332,7 +316,7 @@ fun AddAccountScreen(
                         accountType = resolvedAccountTypeLabel,
                         network = selectedNetwork,
                         fullCardNumber = cardNumber,
-                        expiryDate = previewFormattedExpiry.ifBlank { "MM/YY" },
+                        expiryDate = accountToEdit?.expiryDate ?: "",
                         startHex = currentTemplate.startHex,
                         endHex = currentTemplate.endHex
                     )
@@ -356,21 +340,14 @@ fun AddAccountScreen(
                     onSelectedNetworkChange = { selectedNetwork = it },
                     cardNumber = cardNumber,
                     onCardNumberChange = { input -> cardNumber = input.filter { it.isDigit() }.take(16) },
-                    rawExpiryDigits = rawExpiryDigits,
-                    onRawExpiryChange = { input -> rawExpiryDigits = input.filter { it.isDigit() }.take(4) },
                     selectedTemplateIndex = selectedTemplateIndex,
                     onSelectedTemplateIndexChange = { selectedTemplateIndex = it },
                     isCardType = isCardType,
                     isOtherType = isOtherType,
                     isCardNumberError = isCardNumberError,
-                    isExpiryError = isExpiryError,
                     onCardNumberFocusChanged = { touched, focused ->
                         if (touched) cardNumberTouched = true
                         cardNumberHasFocus = focused
-                    },
-                    onExpiryFocusChanged = { touched, focused ->
-                        if (touched) expiryTouched = true
-                        expiryHasFocus = focused
                     },
                     currentTemplate = currentTemplate,
                     isSaveEnabled = isSaveEnabled,
@@ -399,7 +376,7 @@ fun AddAccountScreen(
                         accountType = resolvedAccountTypeLabel,
                         network = selectedNetwork,
                         fullCardNumber = cardNumber,
-                        expiryDate = previewFormattedExpiry.ifBlank { "MM/YY" },
+                        expiryDate = accountToEdit?.expiryDate ?: "",
                         startHex = currentTemplate.startHex,
                         endHex = currentTemplate.endHex
                     )
@@ -423,21 +400,14 @@ fun AddAccountScreen(
                     onSelectedNetworkChange = { selectedNetwork = it },
                     cardNumber = cardNumber,
                     onCardNumberChange = { input -> cardNumber = input.filter { it.isDigit() }.take(16) },
-                    rawExpiryDigits = rawExpiryDigits,
-                    onRawExpiryChange = { input -> rawExpiryDigits = input.filter { it.isDigit() }.take(4) },
                     selectedTemplateIndex = selectedTemplateIndex,
                     onSelectedTemplateIndexChange = { selectedTemplateIndex = it },
                     isCardType = isCardType,
                     isOtherType = isOtherType,
                     isCardNumberError = isCardNumberError,
-                    isExpiryError = isExpiryError,
                     onCardNumberFocusChanged = { touched, focused ->
                         if (touched) cardNumberTouched = true
                         cardNumberHasFocus = focused
-                    },
-                    onExpiryFocusChanged = { touched, focused ->
-                        if (touched) expiryTouched = true
-                        expiryHasFocus = focused
                     },
                     currentTemplate = currentTemplate,
                     isSaveEnabled = isSaveEnabled,
@@ -465,16 +435,12 @@ private fun AccountForm(
     onSelectedNetworkChange: (String) -> Unit,
     cardNumber: String,
     onCardNumberChange: (String) -> Unit,
-    rawExpiryDigits: String,
-    onRawExpiryChange: (String) -> Unit,
     selectedTemplateIndex: Int,
     onSelectedTemplateIndexChange: (Int) -> Unit,
     isCardType: Boolean,
     isOtherType: Boolean,
     isCardNumberError: Boolean,
-    isExpiryError: Boolean,
     onCardNumberFocusChanged: (Boolean, Boolean) -> Unit,
-    onExpiryFocusChanged: (Boolean, Boolean) -> Unit,
     currentTemplate: CardTemplate,
     isSaveEnabled: Boolean,
     isEditMode: Boolean,
@@ -648,76 +614,40 @@ private fun AccountForm(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    // Card Number Field
-                    OutlinedTextField(
-                        value = cardNumber,
-                        onValueChange = onCardNumberChange,
-                        label = { Text("Card Number") },
-                        placeholder = { Text("1234567890123456") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(18.dp),
-                        isError = isCardNumberError,
-                        supportingText = {
-                            if (isCardNumberError) {
-                                Text(
-                                    text = "Incomplete card number",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Next
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        ),
-                        modifier = Modifier
-                            .weight(1.5f)
-                            .onFocusChanged { focusState ->
-                                onCardNumberFocusChanged(focusState.isFocused, focusState.isFocused)
-                            }
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Clean 4-Digit Raw Expiry Field
-                    OutlinedTextField(
-                        value = rawExpiryDigits,
-                        onValueChange = onRawExpiryChange,
-                        label = { Text("Expiry") },
-                        placeholder = { Text("MMYY") },
-                        singleLine = true,
-                        shape = RoundedCornerShape(18.dp),
-                        isError = isExpiryError,
-                        supportingText = {
-                            if (isExpiryError) {
-                                Text(
-                                    text = "Invalid date",
-                                    color = MaterialTheme.colorScheme.error
-                                )
-                            }
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Number,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { focusManager.clearFocus() }
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .onFocusChanged { focusState ->
-                                onExpiryFocusChanged(focusState.isFocused, focusState.isFocused)
-                            }
-                    )
-                }
+                // Card Number Field
+                OutlinedTextField(
+                    value = cardNumber,
+                    onValueChange = onCardNumberChange,
+                    label = { Text("Card Number") },
+                    placeholder = { Text("1234567890123456") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(18.dp),
+                    isError = isCardNumberError,
+                    supportingText = {
+                        if (isCardNumberError) {
+                            Text(
+                                text = "Incomplete card number",
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = { focusManager.clearFocus() }
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onFocusChanged { focusState ->
+                            onCardNumberFocusChanged(focusState.isFocused, focusState.isFocused)
+                        }
+                )
             }
         }
 
@@ -823,7 +753,7 @@ fun LiveCardPreview(
     accountType: String,
     network: String,
     fullCardNumber: String,
-    expiryDate: String,
+    expiryDate: String = "",
     startHex: String,
     endHex: String
 ) {
