@@ -90,6 +90,7 @@ fun TransactionsScreen(
         allTransactions.filter { tx ->
             val matchesSearch = query.isBlank() ||
                     tx.title.contains(query, ignoreCase = true) ||
+                    tx.displayTitle.contains(query, ignoreCase = true) ||
                     tx.accountName.contains(query, ignoreCase = true) ||
                     tx.category.name.contains(query, ignoreCase = true) ||
                     tx.subtitle.contains(query, ignoreCase = true) ||

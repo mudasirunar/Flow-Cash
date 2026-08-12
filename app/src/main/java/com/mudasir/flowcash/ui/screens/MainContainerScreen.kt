@@ -525,7 +525,7 @@ fun MainContainerScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = detailsTx.title,
+                        text = detailsTx.displayTitle,
                         style =
                             MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold
@@ -832,7 +832,7 @@ fun MainContainerScreen(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = menuTx.title,
+                            text = menuTx.displayTitle,
                             style =
                                 MaterialTheme.typography.bodyLarge.copy(
                                     fontWeight = FontWeight.Bold
@@ -1217,8 +1217,8 @@ fun AddTransactionSheetContent(
                 title = it
                 titleError = null
             },
-            label = { Text("Description / Merchant") },
-            placeholder = { Text("e.g. Starbucks, Salary, Amazon") },
+            label = { Text("Description / Merchant (Optional)") },
+            placeholder = { Text("e.g. Starbucks, Amazon (Optional)") },
             leadingIcon = {
                 Icon(
                     imageVector = Icons.Default.Storefront,
@@ -1540,12 +1540,7 @@ fun AddTransactionSheetContent(
                     amountError = null
                 }
 
-                if (title.isBlank()) {
-                    titleError = "Description / Merchant is required"
-                    hasError = true
-                } else {
-                    titleError = null
-                }
+                titleError = null
 
                 if (!hasError) {
                     onAdd(

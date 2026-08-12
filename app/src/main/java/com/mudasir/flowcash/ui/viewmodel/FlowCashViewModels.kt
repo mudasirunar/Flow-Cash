@@ -361,7 +361,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         _selectedAccount
     ) { txs, query, filter, account ->
         txs.filter { tx ->
-            val matchesSearch = query.isBlank() || tx.title.contains(query, ignoreCase = true) || tx.subtitle.contains(query, ignoreCase = true)
+            val matchesSearch = query.isBlank() || tx.title.contains(query, ignoreCase = true) || tx.displayTitle.contains(query, ignoreCase = true) || tx.subtitle.contains(query, ignoreCase = true)
             val matchesFilter = filter == null || tx.type == filter
             val matchesAccount = account == null || tx.accountName.equals(account.name, ignoreCase = true)
             matchesSearch && matchesFilter && matchesAccount

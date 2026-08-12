@@ -1762,13 +1762,20 @@ fun TransactionRowItem(
                 }
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
-                    val categoryText = if (transaction.category == CategoryType.OTHER && transaction.subtitle.isNotBlank() && transaction.subtitle != "Manual entry") {
+                    val categoryText = if (transaction.category == CategoryType.OTHER && transaction.subtitle.isNotBlank() && transaction.subtitle != "Manual entry" && transaction.subtitle != "Manual Entry") {
                         transaction.subtitle
                     } else {
-                        transaction.category.name.lowercase().replaceFirstChar { it.uppercase() }
+                        transaction.category.name.lowercase().replace("_", " ").split(" ")
+                            .joinToString(" ") { it.replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase() else char.toString() } }
                     }
-                    Text(transaction.title, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface))
-                    Text("${transaction.accountName} • $categoryText • $relativeTime", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val hasTitle = transaction.title.isNotBlank()
+                    Text(transaction.displayTitle, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface))
+                    val sublineText = if (hasTitle) {
+                        "${transaction.accountName} • $categoryText • $relativeTime"
+                    } else {
+                        "${transaction.accountName} • $relativeTime"
+                    }
+                    Text(sublineText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             Text(

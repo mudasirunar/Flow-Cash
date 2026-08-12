@@ -47,7 +47,17 @@ data class TransactionItem(
     val note: String? = null,
     val createdAt: Long = timestamp,
     val updatedAt: Long = timestamp
-)
+) {
+    val displayTitle: String
+        get() = if (title.isNotBlank()) {
+            title
+        } else if (category == CategoryType.OTHER && subtitle.isNotBlank() && subtitle != "Manual Entry" && subtitle != "Manual entry") {
+            subtitle
+        } else {
+            category.name.lowercase().replace("_", " ").split(" ")
+                .joinToString(" ") { it.replaceFirstChar { char -> if (char.isLowerCase()) char.titlecase() else char.toString() } }
+        }
+}
 
 @Immutable
 data class CashFlowSummary(
