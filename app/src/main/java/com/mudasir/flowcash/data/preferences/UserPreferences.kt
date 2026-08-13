@@ -41,11 +41,11 @@ class UserPreferences(private val context: Context) {
     }
 
     val currencyFlow: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[KEY_CURRENCY] ?: "$"
+        preferences[KEY_CURRENCY] ?: "Rs"
     }
 
     val currencyCodeFlow: Flow<String> = context.dataStore.data.map { preferences ->
-        preferences[KEY_CURRENCY_CODE] ?: "USD"
+        preferences[KEY_CURRENCY_CODE] ?: "PKR"
     }
 
     val biometricsFlow: Flow<Boolean> = context.dataStore.data.map { preferences ->

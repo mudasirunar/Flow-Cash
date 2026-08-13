@@ -509,13 +509,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val currency: StateFlow<String> = userPreferences.currencyFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = "$"
+        initialValue = "Rs"
     )
 
     val currencyCode: StateFlow<String> = userPreferences.currencyCodeFlow.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
-        initialValue = "USD"
+        initialValue = "PKR"
     )
 
     val biometricsEnabled: StateFlow<Boolean> = userPreferences.biometricsFlow.stateIn(

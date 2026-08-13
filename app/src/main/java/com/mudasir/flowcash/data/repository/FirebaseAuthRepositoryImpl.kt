@@ -39,8 +39,8 @@ class FirebaseAuthRepositoryImpl(
         val colorHex = UserAvatarUtils.getAvatarColorHexForUser(email, name)
         val firestore = FirebaseFirestore.getInstance()
 
-        var remoteSymbol = "$"
-        var remoteCode = "USD"
+        var remoteSymbol = "Rs"
+        var remoteCode = "PKR"
         try {
             val snapshot = firestore.collection("users").document(fbUser.uid).get().await()
             if (snapshot.exists()) {
