@@ -1,45 +1,42 @@
 package com.mudasir.flowcash.ui.screens
 
+import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.platform.LocalConfiguration
-import android.content.res.Configuration
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.PieChart
-import androidx.compose.material.icons.filled.Contactless
 import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
-import androidx.compose.material.icons.filled.Warning
-import com.mudasir.flowcash.ui.components.FlowCashConfirmDialog
-import androidx.compose.material.icons.filled.Widgets
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,8 +48,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -67,31 +62,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mudasir.flowcash.data.local.entity.AccountEntity
-import com.mudasir.flowcash.ui.theme.ExpenseRed
-import com.mudasir.flowcash.ui.theme.PrimaryIndigo
-import com.mudasir.flowcash.ui.theme.CardTemplate
+import com.mudasir.flowcash.ui.components.FlowCashConfirmDialog
 import com.mudasir.flowcash.ui.theme.CARD_TEMPLATES
+import com.mudasir.flowcash.ui.theme.CardTemplate
+import com.mudasir.flowcash.ui.theme.ExpenseRed
 import com.mudasir.flowcash.ui.theme.parseHexColor
-
-val CARD_NETWORKS = listOf(
-    "VISA",
-    "MASTERCARD",
-    "AMEX",
-    "DISCOVER",
-    "JCB",
-    "UNIONPAY",
-    "RUPAY"
-)
 
 val ACCOUNT_TYPES = listOf(
     "CARD" to Icons.Default.CreditCard,
@@ -120,48 +104,39 @@ fun AddAccountScreen(
 
     var accountName by rememberSaveable(accountToEdit?.id) { mutableStateOf(accountToEdit?.name ?: "") }
     var holderName by rememberSaveable(accountToEdit?.id) { mutableStateOf(accountToEdit?.holderName ?: "") }
-    
+
     val initialType = remember(accountToEdit) {
         val type = accountToEdit?.accountType ?: "CARD"
         if (ACCOUNT_TYPES.any { it.first == type }) type else "OTHER"
     }
-    
+
     var customTypeName by rememberSaveable(accountToEdit?.id) {
         val type = accountToEdit?.accountType ?: "CARD"
         val initialSelectedType = if (ACCOUNT_TYPES.any { it.first == type }) type else "OTHER"
         mutableStateOf(if (initialSelectedType == "OTHER") type else "")
     }
-    
+
     var selectedType by rememberSaveable(accountToEdit?.id) { mutableStateOf(initialType) }
-    var selectedNetwork by rememberSaveable(accountToEdit?.id) { mutableStateOf(accountToEdit?.network?.ifEmpty { "VISA" } ?: "VISA") }
-    var cardNumber by rememberSaveable(accountToEdit?.id) { mutableStateOf(accountToEdit?.cardNumber ?: "") }
     var selectedTemplateIndex by rememberSaveable(accountToEdit?.id) { mutableStateOf(initialTemplateIndex) }
 
     val hasChanges = remember(
         accountName, holderName, selectedType, customTypeName,
-        selectedNetwork, cardNumber, selectedTemplateIndex, accountToEdit
+        selectedTemplateIndex, accountToEdit
     ) {
         val initialName = accountToEdit?.name ?: ""
         val initialHolder = accountToEdit?.holderName ?: ""
-        
+
         val initialTypeRaw = accountToEdit?.accountType ?: "CARD"
         val initialSelectedType = if (ACCOUNT_TYPES.any { it.first == initialTypeRaw }) initialTypeRaw else "OTHER"
         val initialCustomTypeName = if (initialSelectedType == "OTHER") initialTypeRaw else ""
-        
-        val initialNetwork = accountToEdit?.network?.ifEmpty { "VISA" } ?: "VISA"
-        val initialCardNumber = accountToEdit?.cardNumber ?: ""
-        
+
         val initialTemplateIdx = CARD_TEMPLATES.indexOfFirst { it.startHex == accountToEdit?.cardColorStart }.coerceAtLeast(0)
 
         accountName != initialName ||
-        holderName != initialHolder ||
-        selectedType != initialSelectedType ||
-        (selectedType == "OTHER" && customTypeName != initialCustomTypeName) ||
-        (selectedType == "CARD" && (
-            selectedNetwork != initialNetwork ||
-            cardNumber != initialCardNumber
-        )) ||
-        selectedTemplateIndex != initialTemplateIdx
+                holderName != initialHolder ||
+                selectedType != initialSelectedType ||
+                (selectedType == "OTHER" && customTypeName != initialCustomTypeName) ||
+                selectedTemplateIndex != initialTemplateIdx
     }
 
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
@@ -215,15 +190,8 @@ fun AddAccountScreen(
         )
     }
 
-    // Focus state for validation on touch loss
-    var cardNumberTouched by rememberSaveable(accountToEdit?.id) { mutableStateOf(false) }
-    var cardNumberHasFocus by rememberSaveable(accountToEdit?.id) { mutableStateOf(false) }
-
-    val isCardType = selectedType == "CARD"
     val isOtherType = selectedType == "OTHER"
-    val isFormValid = accountName.isNotBlank() &&
-            (!isOtherType || customTypeName.isNotBlank()) &&
-            (!isCardType || cardNumber.length == 16)
+    val isFormValid = accountName.isNotBlank() && (!isOtherType || customTypeName.isNotBlank())
     val isSaveEnabled = isFormValid && (!isEditMode || hasChanges)
     val currentTemplate = CARD_TEMPLATES[selectedTemplateIndex]
 
@@ -234,9 +202,6 @@ fun AddAccountScreen(
     } else {
         selectedType
     }
-
-    // Errors evaluate only when the field has lost focus
-    val isCardNumberError = isCardType && cardNumberTouched && !cardNumberHasFocus && cardNumber.length < 16
 
     Scaffold(
         topBar = {
@@ -280,9 +245,9 @@ fun AddAccountScreen(
                     name = accountName,
                     holderName = holderName,
                     accountType = resolvedAccountTypeLabel,
-                    network = if (isCardType) selectedNetwork else "NONE",
-                    cardNumber = if (isCardType) cardNumber else "",
-                    expiryDate = accountToEdit?.expiryDate ?: "",
+                    network = "",
+                    cardNumber = "",
+                    expiryDate = "",
                     cardColorStart = currentTemplate.startHex,
                     cardColorEnd = currentTemplate.endHex,
                     createdAt = accountToEdit?.createdAt ?: System.currentTimeMillis(),
@@ -312,11 +277,8 @@ fun AddAccountScreen(
                 ) {
                     LiveCardPreview(
                         accountName = accountName.ifBlank { "Account Name" },
-                        holderName = holderName.ifBlank { "CARDHOLDER" },
+                        holderName = holderName.ifBlank { "ACCOUNT HOLDER" },
                         accountType = resolvedAccountTypeLabel,
-                        network = selectedNetwork,
-                        fullCardNumber = cardNumber,
-                        expiryDate = accountToEdit?.expiryDate ?: "",
                         startHex = currentTemplate.startHex,
                         endHex = currentTemplate.endHex
                     )
@@ -336,19 +298,9 @@ fun AddAccountScreen(
                     onAccountNameChange = { accountName = it },
                     holderName = holderName,
                     onHolderNameChange = { holderName = it },
-                    selectedNetwork = selectedNetwork,
-                    onSelectedNetworkChange = { selectedNetwork = it },
-                    cardNumber = cardNumber,
-                    onCardNumberChange = { input -> cardNumber = input.filter { it.isDigit() }.take(16) },
                     selectedTemplateIndex = selectedTemplateIndex,
                     onSelectedTemplateIndexChange = { selectedTemplateIndex = it },
-                    isCardType = isCardType,
                     isOtherType = isOtherType,
-                    isCardNumberError = isCardNumberError,
-                    onCardNumberFocusChanged = { touched, focused ->
-                        if (touched) cardNumberTouched = true
-                        cardNumberHasFocus = focused
-                    },
                     currentTemplate = currentTemplate,
                     isSaveEnabled = isSaveEnabled,
                     isEditMode = isEditMode,
@@ -372,11 +324,8 @@ fun AddAccountScreen(
                 ) {
                     LiveCardPreview(
                         accountName = accountName.ifBlank { "Account Name" },
-                        holderName = holderName.ifBlank { "CARDHOLDER" },
+                        holderName = holderName.ifBlank { "ACCOUNT HOLDER" },
                         accountType = resolvedAccountTypeLabel,
-                        network = selectedNetwork,
-                        fullCardNumber = cardNumber,
-                        expiryDate = accountToEdit?.expiryDate ?: "",
                         startHex = currentTemplate.startHex,
                         endHex = currentTemplate.endHex
                     )
@@ -396,19 +345,9 @@ fun AddAccountScreen(
                     onAccountNameChange = { accountName = it },
                     holderName = holderName,
                     onHolderNameChange = { holderName = it },
-                    selectedNetwork = selectedNetwork,
-                    onSelectedNetworkChange = { selectedNetwork = it },
-                    cardNumber = cardNumber,
-                    onCardNumberChange = { input -> cardNumber = input.filter { it.isDigit() }.take(16) },
                     selectedTemplateIndex = selectedTemplateIndex,
                     onSelectedTemplateIndexChange = { selectedTemplateIndex = it },
-                    isCardType = isCardType,
                     isOtherType = isOtherType,
-                    isCardNumberError = isCardNumberError,
-                    onCardNumberFocusChanged = { touched, focused ->
-                        if (touched) cardNumberTouched = true
-                        cardNumberHasFocus = focused
-                    },
                     currentTemplate = currentTemplate,
                     isSaveEnabled = isSaveEnabled,
                     isEditMode = isEditMode,
@@ -431,16 +370,9 @@ private fun AccountForm(
     onAccountNameChange: (String) -> Unit,
     holderName: String,
     onHolderNameChange: (String) -> Unit,
-    selectedNetwork: String,
-    onSelectedNetworkChange: (String) -> Unit,
-    cardNumber: String,
-    onCardNumberChange: (String) -> Unit,
     selectedTemplateIndex: Int,
     onSelectedTemplateIndexChange: (Int) -> Unit,
-    isCardType: Boolean,
     isOtherType: Boolean,
-    isCardNumberError: Boolean,
-    onCardNumberFocusChanged: (Boolean, Boolean) -> Unit,
     currentTemplate: CardTemplate,
     isSaveEnabled: Boolean,
     isEditMode: Boolean,
@@ -547,9 +479,7 @@ private fun AccountForm(
             label = { Text("Holder Name (display on card)") },
             singleLine = true,
             shape = RoundedCornerShape(18.dp),
-            keyboardOptions = KeyboardOptions(
-                imeAction = if (isCardType) ImeAction.Next else ImeAction.Done
-            ),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(
                 onDone = { focusManager.clearFocus() }
             ),
@@ -559,97 +489,6 @@ private fun AccountForm(
             ),
             modifier = Modifier.fillMaxWidth()
         )
-
-        // === Card-specific fields ===
-        AnimatedVisibility(visible = isCardType) {
-            Column {
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(
-                    text = "Card Network",
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                val cardNetworkLazyState = rememberLazyListState()
-                LaunchedEffect(selectedNetwork) {
-                    val index = CARD_NETWORKS.indexOf(selectedNetwork)
-                    if (index >= 0) {
-                        cardNetworkLazyState.animateScrollToItem(index)
-                    }
-                }
-
-                LazyRow(
-                    state = cardNetworkLazyState,
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(CARD_NETWORKS.size) { index ->
-                        val net = CARD_NETWORKS[index]
-                        val isSel = selectedNetwork == net
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (isSel) MaterialTheme.colorScheme.primary.copy(alpha = 0.38f)
-                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                                )
-                                .border(
-                                    width = if (isSel) 1.5.dp else 1.dp,
-                                    color = if (isSel) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f),
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .clickable { onSelectedNetworkChange(net) }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = net,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(14.dp))
-
-                // Card Number Field
-                OutlinedTextField(
-                    value = cardNumber,
-                    onValueChange = onCardNumberChange,
-                    label = { Text("Card Number") },
-                    placeholder = { Text("1234567890123456") },
-                    singleLine = true,
-                    shape = RoundedCornerShape(18.dp),
-                    isError = isCardNumberError,
-                    supportingText = {
-                        if (isCardNumberError) {
-                            Text(
-                                text = "Incomplete card number",
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                    },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = { focusManager.clearFocus() }
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { focusState ->
-                            onCardNumberFocusChanged(focusState.isFocused, focusState.isFocused)
-                        }
-                )
-            }
-        }
 
         Spacer(modifier = Modifier.height(24.dp))
 
@@ -702,29 +541,13 @@ private fun AccountForm(
                         .padding(10.dp),
                     contentAlignment = Alignment.BottomStart
                 ) {
-                    Column {
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp, 12.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        colors = listOf(
-                                            Color.White.copy(alpha = 0.8f),
-                                            Color.White.copy(alpha = 0.4f)
-                                        )
-                                    )
-                                )
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = template.name,
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 10.sp,
-                            maxLines = 1
-                        )
-                    }
+                    Text(
+                        text = template.name,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
+                        maxLines = 1
+                    )
                 }
             }
         }
@@ -751,17 +574,11 @@ fun LiveCardPreview(
     accountName: String,
     holderName: String,
     accountType: String,
-    network: String,
-    fullCardNumber: String,
-    expiryDate: String = "",
     startHex: String,
     endHex: String
 ) {
-    val isCardType = accountType == "CARD"
-
-    val formattedCardNumber = remember(fullCardNumber) {
-        val padded = fullCardNumber.padEnd(16, '•')
-        padded.chunked(4).joinToString("   ")
+    val formattedTypeLabel = remember(accountType) {
+        accountType.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
     }
 
     Box(
@@ -778,7 +595,7 @@ fun LiveCardPreview(
             .padding(20.dp)
     ) {
         Column {
-            // Top row: Name + Network Logo
+            // Top row: Account Name + Account Type Tag
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -786,229 +603,49 @@ fun LiveCardPreview(
             ) {
                 Text(
                     text = accountName,
-                    style = MaterialTheme.typography.titleSmall.copy(
+                    style = MaterialTheme.typography.titleMedium.copy(
                         color = Color.White,
                         fontWeight = FontWeight.Bold
-                    )
+                    ),
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
 
-                if (isCardType) {
-                    CardNetworkLogo(network = network)
-                }
-            }
+                Spacer(modifier = Modifier.width(8.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Chip + Contactless
-            if (isCardType) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Realistic chip with inner lines
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp, 26.dp)
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(
-                                Brush.linearGradient(listOf(Color(0xFFFCD34D), Color(0xFFF59E0B)))
-                            )
-                            .border(0.5.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(5.dp))
-                    ) {
-                        // Inner chip lines
-                        Column(
-                            modifier = Modifier.fillMaxSize().padding(3.dp),
-                            verticalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            repeat(3) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(Color(0xFFD97706).copy(alpha = 0.4f))
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Icon(
-                        imageVector = Icons.Default.Contactless,
-                        contentDescription = "Contactless",
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(if (isCardType) 16.dp else 8.dp))
-
-            // Card number or account type label
-            if (isCardType) {
                 Text(
-                    text = formattedCardNumber,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 2.sp
-                    )
-                )
-            } else {
-                val typeLabel = accountType.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
-                Text(
-                    text = typeLabel,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Bottom: Holder name + Expiry
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                Column {
-                    Text(
-                        text = "CARD HOLDER",
-                        color = Color.White.copy(alpha = 0.35f),
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 1.sp
-                    )
-                    Text(
-                        text = holderName.uppercase(),
-                        color = Color.White.copy(alpha = 0.8f),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                        letterSpacing = 1.sp
-                    )
-                }
-                if (isCardType && expiryDate.isNotBlank()) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "VALID THRU",
-                            color = Color.White.copy(alpha = 0.35f),
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            letterSpacing = 1.sp
-                        )
-                        Text(
-                            text = expiryDate,
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CardNetworkLogo(network: String) {
-    when (network.uppercase()) {
-        "MASTERCARD" -> {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
+                    text = formattedTypeLabel,
+                    color = Color.White.copy(alpha = 0.85f),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 11.sp,
                     modifier = Modifier
-                        .size(20.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFEB001B))
-                )
-                Spacer(modifier = Modifier.width(-8.dp))
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFBBF24).copy(alpha = 0.9f))
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
-        }
-        "VISA" -> {
-            Text(
-                text = "VISA",
-                color = Color.White,
-                fontWeight = FontWeight.Black,
-                fontSize = 17.sp,
-                letterSpacing = 2.sp
-            )
-        }
-        "AMEX" -> {
-            Text(
-                text = "AMEX",
-                color = Color(0xFF0070CD),
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White)
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
-        }
-        "DISCOVER" -> {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Bottom: Holder name label and value
+            Column {
                 Text(
-                    text = "DISCOVER",
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
+                    text = "ACCOUNT HOLDER",
+                    color = Color.White.copy(alpha = 0.4f),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.SemiBold,
                     letterSpacing = 1.sp
                 )
-                Spacer(modifier = Modifier.width(3.dp))
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFF6000))
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = holderName.uppercase(),
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    letterSpacing = 1.sp,
+                    maxLines = 1
                 )
             }
-        }
-        "JCB" -> {
-            Text(
-                text = "JCB",
-                color = Color.White,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 13.sp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0xFF003781))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
-        }
-        "UNIONPAY" -> {
-            Text(
-                text = "UnionPay",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0xFF007B88))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
-        }
-        "RUPAY" -> {
-            Text(
-                text = "RuPay",
-                color = Color(0xFF132A63),
-                fontWeight = FontWeight.Black,
-                fontSize = 12.sp,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.White)
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            )
-        }
-        else -> {
-            Text(
-                text = network,
-                color = Color.White.copy(alpha = 0.8f),
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp
-            )
         }
     }
 }

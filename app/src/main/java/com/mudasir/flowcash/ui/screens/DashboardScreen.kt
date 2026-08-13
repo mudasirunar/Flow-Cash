@@ -1017,7 +1017,7 @@ fun DashboardScreen(
 
                         AccountSelectorRow(
                             label = account.name,
-                            subtitle = "${account.network} • **** ${if (account.cardNumber.length >= 4) account.cardNumber.takeLast(4) else "0000"}",
+                            subtitle = if (account.holderName.isNotBlank()) account.holderName else account.accountType.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
                             icon = accountIcon,
                             accountTypeTag = account.accountType,
                             cardColors = listOf(parseHexColor(account.cardColorStart), parseHexColor(account.cardColorEnd)),
@@ -1534,26 +1534,22 @@ private fun SelectedAccountCard(
                         CardEyeButton(isDataVisible = isDataVisible, onToggle = onToggleVisibility)
                         Spacer(modifier = Modifier.width(8.dp))
 
-                        if (isCard) {
-                            CardNetworkLogo(network = account.network)
-                        } else {
-                            Text(
-                                text = formattedAccountType,
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(Color.White.copy(alpha = 0.15f))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
+                        Text(
+                            text = formattedAccountType,
+                            color = Color.White.copy(alpha = 0.85f),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.White.copy(alpha = 0.15f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Middle Row: Balance Display (left) + EMV Gold Chip & Contactless (right)
+                // Middle Row: Balance Display
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -1572,62 +1568,12 @@ private fun SelectedAccountCard(
                             fontSize = 25.sp
                         )
                     )
-
-                    if (isCard) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(30.dp, 22.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(Brush.linearGradient(listOf(Color(0xFFFCD34D), Color(0xFFF59E0B))))
-                                    .border(0.5.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
-                            ) {
-                                Column(modifier = Modifier.fillMaxSize().padding(2.dp), verticalArrangement = Arrangement.SpaceEvenly) {
-                                    repeat(3) {
-                                        Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFFD97706).copy(alpha = 0.4f)))
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Icon(Icons.Default.Contactless, contentDescription = null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
-                        }
-                    }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                // Card Number + Expiry + Holder Name in a sleek compact row
-                if (isCard) {
-                    Crossfade(targetState = isDataVisible, animationSpec = tween(250), label = "CardDetailsVisibility") { visible ->
-                        val rawNumber = account.cardNumber.ifBlank { "0000000000000000" }
-                        val numberStr = if (visible) rawNumber.padEnd(16, '0').chunked(4).joinToString(" ") else "•••• •••• •••• ${rawNumber.takeLast(4)}"
-                        val expiryStr = if (visible) account.expiryDate.ifBlank { "MM/YY" } else "••/••"
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "$numberStr   •   $expiryStr",
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.8.sp,
-                                fontSize = 11.sp
-                            )
-                            if (account.holderName.isNotBlank()) {
-                                Text(
-                                    text = account.holderName.uppercase(),
-                                    color = Color.White.copy(alpha = 0.6f),
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 10.sp,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                } else if (account.holderName.isNotBlank()) {
+                // Bottom Row: Holder Name (if available)
+                if (account.holderName.isNotBlank()) {
                     Crossfade(targetState = isDataVisible, animationSpec = tween(250), label = "HolderNameVisibility") { visible ->
                         if (visible) {
                             Text(account.holderName.uppercase(), color = Color.White.copy(alpha = 0.6f), fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.sp)
