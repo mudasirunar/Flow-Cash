@@ -279,6 +279,29 @@ class RemoteSyncManager(
         }
     }
 
+    suspend fun clearRemoteUserData(userId: String? = null) {
+        val targetUserId = if (!userId.isNullOrBlank()) userId else (activeUserId ?: com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid)
+        if (targetUserId.isNullOrBlank()) return
+
+        val userDocRef = firestore.collection("users").document(targetUserId)
+        try {
+            val accountsSnap = userDocRef.collection("accounts").get().await()
+            for (doc in accountsSnap.documents) {
+                doc.reference.delete().await()
+            }
+
+            val transactionsSnap = userDocRef.collection("transactions").get().await()
+            for (doc in transactionsSnap.documents) {
+                doc.reference.delete().await()
+            }
+
+            val budgetsSnap = userDocRef.collection("budgets").get().await()
+            for (doc in budgetsSnap.documents) {
+                doc.reference.delete().await()
+            }
+        } catch (_: Exception) { }
+    }
+
     fun stopSync() {
         accountsListener?.remove()
         transactionsListener?.remove()

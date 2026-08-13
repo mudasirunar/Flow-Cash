@@ -140,6 +140,7 @@ class TransactionRepository(
     }
 
     suspend fun clearLocalDatabase() {
+        remoteSyncManager.clearRemoteUserData()
         remoteSyncManager.stopSync()
         transactionDao.clearAll()
         budgetDao.clearAllBudgets()
